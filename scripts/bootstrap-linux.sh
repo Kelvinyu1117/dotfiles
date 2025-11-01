@@ -178,23 +178,6 @@ install_starship() {
   fi
 }
 
-# ---------- Default shell ----------
-set_default_shell_zsh() {
-  if command -v zsh >/dev/null; then
-    if [ "${SHELL:-}" != "$(command -v zsh)" ]; then
-      chsh -s "$(command -v zsh)" || echo "[warn] chsh failed (likely container) — skipping"
-    fi
-    # Only exec zsh for interactive bash shells
-    if ! grep -q "exec zsh" "$HOME/.bashrc" 2>/dev/null; then
-      {
-        echo ''
-        echo '# Auto-start zsh from interactive Bash'
-        echo 'if [[ $- == *i* ]]; then exec zsh; fi'
-      } >> "$HOME/.bashrc"
-    fi
-  fi
-}
-
 # ================== MAIN ==================
 ensure_path_persist
 
@@ -218,10 +201,5 @@ install_starship
 install_chezmoi
 echo "[info] Applying chezmoi dotfiles (current dir as source)…"
 chezmoi --source . apply -R --force -k || echo "[warn] chezmoi apply returned non-zero"
-
-
-
-# Default shell
-set_default_shell_zsh
 
 echo "[success] Linux bootstrap complete!"
