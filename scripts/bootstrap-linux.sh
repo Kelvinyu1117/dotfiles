@@ -1,7 +1,7 @@
 #!/bin/bash
 set -e
 
-linux_packages=(git curl zsh unzip)
+linux_packages=(git curl zsh unzip ripgrep)
 
 echo "Updating apt and installing packages: ${linux_packages[*]}"
 sudo apt-get update
@@ -80,4 +80,29 @@ fi
 if command -v starship &>/dev/null; then
   echo "Starship installed: $(starship --version)"
   echo 'To activate Starship prompt in zsh, add this to your ~/.zshrc:'
-  echo
+  echo 'eval "$(starship init zsh)"'
+else
+  echo "Failed to install Starship."
+fi
+
+if command -v nvim &>/dev/null; then
+  echo "Syncing Neovim plugins with Lazy.nvim (if configured)..."
+  nvim --headless "+Lazy! sync" +qa || echo "Lazy.nvim sync failed or is not configured"
+fi
+
+# Safe attempt to set zsh as default shell
+if [ "$SHELL" != "$(which zsh)" ]; then
+  echo "Setting zsh as your default shell..."
+  if ! chsh -s "$(which zsh)"; then
+    echo "Warning: Failed to change shell with chsh. You may need to set your shell manually, especially in containers."
+  fi
+fi
+
+# Add 'exec zsh' to ~/.bashrc so bash always starts zsh
+if ! grep -q "exec zsh" "$HOME/.bashrc"; then
+  echo "Adding 'exec zsh' to ~/.bashrc to automatically start zsh from bash..."
+  echo "exec zsh" >> "$HOME/.bashrc"
+fi
+
+echo "Linux bootstrap complete!"
+echo "Linux bootstrap complete!"
