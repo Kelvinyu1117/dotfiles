@@ -176,9 +176,6 @@ install_starship() {
   if ! command -v starship >/dev/null; then
     BIN_DIR="$USER_BIN" sh -c "$(curl -fsSL https://starship.rs/install.sh)" -- --yes
   fi
-  if command -v starship >/dev/null && ! grep -q 'eval "$(starship init zsh)"' "$HOME/.zshrc"; then
-    echo 'eval "$(starship init zsh)"' >> "$HOME/.zshrc"
-  fi
 }
 
 # ---------- Default shell ----------
@@ -214,13 +211,15 @@ if command -v nvim >/dev/null; then
   nvim --headless "+Lazy! sync" +qa || true
 fi
 
-# Chezmoi / Yazi / Starship
+
+# Yazi / Starship / Chezmoi
+install_yazi
+install_starship
 install_chezmoi
 echo "[info] Applying chezmoi dotfiles (current dir as source)…"
 chezmoi --source . apply -R || echo "[warn] chezmoi apply returned non-zero"
 
-install_yazi
-install_starship
+
 
 # Default shell
 set_default_shell_zsh
