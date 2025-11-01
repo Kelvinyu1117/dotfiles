@@ -34,22 +34,24 @@ fi
 # Install chezmoi if not found
 if ! command -v chezmoi &>/dev/null; then
   echo "chezmoi not found, installing..."
-  sh -c "$(curl -fsLS get.chezmoi.io)"
+  sh -c "$(curl -fsLS get.chezmoi.io/lb)"
   sleep 2
 fi
 
-# Add chezmoi to PATH if necessary
+# Add default install path to PATH if chezmoi still not found
 if ! command -v chezmoi &>/dev/null; then
-  export PATH="$HOME/.local/bin:$PATH"
+    export PATH=".local/bin:$PATH"
+    echo "Exporting PATH=$PATH"
 fi
 
+# Final check for chezmoi
 if ! command -v chezmoi &>/dev/null; then
   echo "Unable to find chezmoi after installation. Exiting."
   exit 1
 fi
 
 echo "Applying chezmoi dotfiles..."
-chezmoi apply -R
+chezmoi --source . apply -R
 
 # Install yazi binary if not present
 if ! command -v yazi &>/dev/null; then
