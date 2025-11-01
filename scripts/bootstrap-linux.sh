@@ -217,7 +217,7 @@ install_yazi
 install_starship
 install_chezmoi
 echo "[info] Applying chezmoi dotfiles (current dir as source)…"
-chezmoi --source . apply -R --no-tty --force -k || echo "[warn] chezmoi apply returned non-zero"
+chezmoi --source . apply -R --force -k || echo "[warn] chezmoi apply returned non-zero"
 
 
 
