@@ -11,6 +11,7 @@ sudo apt-get install -y "${linux_packages[@]}"
 echo "Installing latest Neovim as AppImage..."
 mkdir -p "$HOME/.local/bin"
 curl -LO https://github.com/neovim/neovim/releases/latest/download/nvim.appimage
+chmod +x nvim.appimage
 mv nvim.appimage "$HOME/.local/bin/nvim.appimage"
 
 # Create symlink named 'nvim' pointing to 'nvim.appimage'
@@ -106,5 +107,4 @@ if ! grep -q "exec zsh" "$HOME/.bashrc"; then
   echo "exec zsh" >> "$HOME/.bashrc"
 fi
 
-echo "Linux bootstrap complete!"
 echo "Linux bootstrap complete!"
