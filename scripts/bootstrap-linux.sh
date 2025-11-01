@@ -12,17 +12,9 @@ echo "Installing latest Neovim as AppImage..."
 mkdir -p "$HOME/.local/bin"
 curl -LO https://github.com/neovim/neovim/releases/latest/download/nvim.appimage
 chmod +x nvim.appimage
-mv nvim.appimage "$HOME/.local/bin/nvim.appimage"
-
-# Create symlink named 'nvim' pointing to 'nvim.appimage'
-ln -sf "$HOME/.local/bin/nvim.appimage" "$HOME/.local/bin/nvim"
+mv nvim.appimage "$HOME/.local/bin/nvim"
 export PATH="$HOME/.local/bin:$PATH"
 
-# Optionally, create global symlink for nvim (requires sudo)
-if [ -f "$HOME/.local/bin/nvim.appimage" ]; then
-  sudo ln -sf "$HOME/.local/bin/nvim.appimage" /usr/local/bin/nvim
-  echo "Symlinked ~/.local/bin/nvim.appimage to /usr/local/bin/nvim"
-fi
 
 # Verify Neovim installation
 if command -v nvim &>/dev/null; then
