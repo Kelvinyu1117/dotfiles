@@ -3,20 +3,21 @@ set -Eeuo pipefail
 
 # ---------- Config ----------
 USER_BIN="$HOME/.local/bin"
+USER_LOCAL="$HOME/.local"
 PATH_UPDATE_LINE='export PATH="$HOME/.local/bin:$PATH"'
 # ----------------------------
 
 linux_packages=(git curl zsh unzip ripgrep libfuse2)
 
 echo "Updating apt and installing packages: ${linux_packages[*]}"
-sudo apt-get update
+sudo apt-get update -y
 sudo apt-get install -y "${linux_packages[@]}"
 
 # Ensure ~/.local/bin exists and is on PATH for this run
-mkdir -p "$USER_BIN"
+mkdir -p "$USER_BIN" "$USER_LOCAL"
 export PATH="$USER_BIN:$PATH"
 
-# Persist PATH for future shells (zsh + bash)
+# Persist PATH for future shells (zsh login + interactive, and bash via .profile)
 touch "$HOME/.profile" "$HOME/.zprofile" "$HOME/.zshrc"
 for f in "$HOME/.profile" "$HOME/.zprofile" "$HOME/.zshrc"; do
   if ! grep -qxF "$PATH_UPDATE_LINE" "$f"; then
@@ -24,35 +25,33 @@ for f in "$HOME/.profile" "$HOME/.zprofile" "$HOME/.zshrc"; do
   fi
 done
 
-# Install latest Neovim (AppImage)
-echo "Installing latest Neovim as AppImage..."
-curl -fsSL -o /tmp/nvim.appimage https://github.com/neovim/neovim/releases/latest/download/nvim.appimage
-chmod +x /tmp/nvim.appimage
-mv /tmp/nvim.appimage "$USER_BIN/nvim"
+# ---------- Neovim: install latest (robust tarball path; no FUSE required) ----------
+install_nvim() {
+  local url1="https://github.com/neovim/neovim/releases/download/stable/nvim-linux-x86_64.tar.gz"
+  local url2="https://github.com/neovim/neovim-releases/releases/latest/download/nvim-linux-x86_64.tar.gz"
 
-# Refresh command hash table in case shell caches paths
-hash -r || true
+  echo "Installing latest Neovim (tarball)…"
+  rm -rf "$HOME/.local/nvim"
+  if curl -fsSL -o /tmp/nvim.tar.gz "$url1" || curl -fsSL -o /tmp/nvim.tar.gz "$url2"; then
+    tar -xzf /tmp/nvim.tar.gz -C /tmp
+    # The extracted dir is nvim-linux-x86_64
+    mv /tmp/nvim-linux-x86_64 "$HOME/.local/nvim"
+    ln -sf "$HOME/.local/nvim/bin/nvim" "$USER_BIN/nvim"
+  else
+    echo "Failed to download Neovim tarball."
+    return 1
+  fi
+  hash -r || true
+  nvim --version | head -1
+}
+install_nvim || { echo "Neovim install failed"; exit 1; }
 
-# Verify Neovim installation
-if command -v nvim &>/dev/null; then
-  echo "Neovim installed: $(nvim --version | head -1)"
-else
-  echo "Failed to install Neovim."
-  exit 1
-fi
-
-# Install chezmoi if not found
+# ---------- chezmoi ----------
 if ! command -v chezmoi &>/dev/null; then
-  echo "chezmoi not found, installing to $USER_BIN..."
-  # Use the installer that targets ~/.local/bin by default
+  echo "chezmoi not found, installing to $USER_BIN…"
+  # Install binary into ~/.local/bin
   sh -c "$(curl -fsLS get.chezmoi.io/lb)" -- -b "$USER_BIN"
   hash -r || true
-fi
-
-# Final check for chezmoi; fix PATH bug from previous script (had ".local/bin" without $HOME)
-if ! command -v chezmoi &>/dev/null; then
-  export PATH="$USER_BIN:$PATH"
-  echo "Exported PATH for current shell: $PATH"
 fi
 
 if ! command -v chezmoi &>/dev/null; then
@@ -60,12 +59,12 @@ if ! command -v chezmoi &>/dev/null; then
   exit 1
 fi
 
-echo "Applying chezmoi dotfiles (from current directory)..."
+echo "Applying chezmoi dotfiles from current directory…"
 chezmoi --source . apply -R || echo "chezmoi apply returned non-zero (check your source)."
 
-# Install yazi if not present
+# ---------- yazi ----------
 if ! command -v yazi &>/dev/null; then
-  echo "yazi not found, installing..."
+  echo "yazi not found, installing…"
   tmpdir="$(mktemp -d)"
   pushd "$tmpdir" >/dev/null
   curl -fsSLO https://github.com/sxyazi/yazi/releases/latest/download/yazi-x86_64-unknown-linux-gnu.zip
@@ -76,20 +75,14 @@ if ! command -v yazi &>/dev/null; then
   rm -rf "$tmpdir"
   hash -r || true
 fi
+command -v yazi >/dev/null && yazi --version 2>/dev/null || echo "yazi install failed"
 
-if command -v yazi &>/dev/null; then
-  echo "Yazi installed successfully: $(yazi --version 2>/dev/null || true)"
-else
-  echo "Failed to install yazi."
-fi
-
-# Install Starship prompt if not present
+# ---------- Starship ----------
 if ! command -v starship &>/dev/null; then
-  echo "Starship prompt not found, installing..."
+  echo "Starship prompt not found, installing…"
   sh -c "$(curl -fsSL https://starship.rs/install.sh)" -- --bin-dir "$USER_BIN" --yes
   hash -r || true
 fi
-
 if command -v starship &>/dev/null; then
   echo "Starship installed: $(starship --version)"
   if ! grep -q 'eval "$(starship init zsh)"' "$HOME/.zshrc"; then
@@ -99,24 +92,21 @@ else
   echo "Failed to install Starship."
 fi
 
-# Sync Neovim plugins with Lazy.nvim (if configured)
-# Uses the documented Lazy user events; safe to no-op if Lazy isn't configured.
-# Ref: https://lazy.folke.io/usage
+# ---------- Lazy.nvim sync (safe no-op if not configured) ----------
 if command -v nvim &>/dev/null; then
-  echo "Syncing Neovim plugins with Lazy.nvim (if configured)..."
-  nvim --headless "+lua vim.api.nvim_create_autocmd('User',{pattern='LazySync',once=true,callback=function() vim.cmd('qa') end})" "+Lazy! sync" || \
-  nvim --headless "+Lazy! sync" +qa || echo "Lazy.nvim sync failed or not configured"
+  echo "Syncing Neovim plugins with Lazy.nvim (if configured)…"
+  nvim --headless "+Lazy! sync" +qa || echo "Lazy.nvim sync failed or is not configured"
 fi
 
-# Safe attempt to set zsh as default shell
+# ---------- Default shell: zsh ----------
 if [ "${SHELL:-}" != "$(command -v zsh)" ]; then
-  echo "Setting zsh as your default shell..."
+  echo "Setting zsh as your default shell…"
   if ! chsh -s "$(command -v zsh)"; then
     echo "Warning: Failed to change shell with chsh. You may need to set your shell manually (common in containers)."
   fi
 fi
 
-# Start zsh only for interactive Bash shells (avoid breaking non-interactive scripts)
+# Start zsh for interactive Bash shells (avoid breaking non-interactive scripts)
 if ! grep -q "exec zsh" "$HOME/.bashrc"; then
   {
     echo ''
