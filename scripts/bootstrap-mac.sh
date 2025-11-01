@@ -1,7 +1,7 @@
 #!/bin/bash
 set -e
 
-mac_packages=(neovim git chezmoi zsh yazi)
+mac_packages=(neovim git chezmoi zsh yazi ripgrep)
 
 if ! command -v brew &>/dev/null; then
   echo "Homebrew not found. Please install Homebrew: https://brew.sh/"
