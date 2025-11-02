@@ -120,3 +120,4 @@ alias vi="nvim"
 alias vimdiff='nvim -d'
 export EDITOR=nvim
 
+export PATH="$HOME/.local/bin:$PATH"
