@@ -29,12 +29,14 @@ ensure_path_persist() {
   export PATH="$USER_BIN:$PATH"
 }
 
-linux_packages=(git curl zsh unzip ripgrep bat fzf eza ca-certificates)
+linux_packages=(git curl zsh unzip ripgrep bat fzf eza ca-certificates fd-find)
 
 install_common_tools_apt() {
   sudo apt-get update -y
   sudo apt-get install -y "${linux_packages[@]}"
   cargo install mcfly --force
+  # link fd
+  ln -s $(which fdfind) "$USER_BIN/fd"
 }
 
 install_common_tools_apk() {
