@@ -1,2 +1,32 @@
 #!/usr/bin/env bash
-ln -sfn "$HOME/.oh-my-zsh/custom/themes/spaceship-prompt/spaceship.zsh-theme" "$HOME/.oh-my-zsh/custom/themes/spaceship.zsh-theme"
+
+echo "=== [Chezmoi] Starting spaceship theme symlink script ==="
+echo "Current working directory: $(pwd)"
+echo "HOME variable: $HOME"
+echo "-----------------------------------------------------"
+
+SPACESHIP_SRC="$HOME/.oh-my-zsh/custom/themes/spaceship-prompt/spaceship.zsh-theme"
+SPACESHIP_DEST="$HOME/.oh-my-zsh/custom/themes/spaceship.zsh-theme"
+
+echo "Checking if source exists: $SPACESHIP_SRC"
+if [ -f "$SPACESHIP_SRC" ]; then
+  echo "Source exists."
+else
+  echo "ERROR: Source theme file does not exist!"
+  exit 1
+fi
+
+echo "Creating/updating symlink:"
+echo "  Target: $SPACESHIP_SRC"
+echo "  Link:   $SPACESHIP_DEST"
+ln -sfn "$SPACESHIP_SRC" "$SPACESHIP_DEST"
+
+echo "Verifying symlink creation..."
+if [ -L "$SPACESHIP_DEST" ]; then
+  echo "Success: Symlink created. Link points to: $(readlink "$SPACESHIP_DEST")"
+else
+  echo "ERROR: Symlink was not created!"
+  exit 2
+fi
+
+echo "=== [Chezmoi] Finished spaceship theme symlink script ==="
