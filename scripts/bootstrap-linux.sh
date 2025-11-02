@@ -179,8 +179,6 @@ install_starship() {
 }
 
 # ================== MAIN ==================
-ensure_path_persist
-
 # Base tooling
 if [ "$HAS_APK" -eq 1 ]; then install_common_tools_apk; fi
 if [ "$HAS_APT" -eq 1 ]; then install_common_tools_apt; fi
@@ -200,6 +198,7 @@ install_yazi
 install_starship
 install_chezmoi
 echo "[info] Applying chezmoi dotfiles (current dir as source)…"
-chezmoi --source . apply -R --force -k || echo "[warn] chezmoi apply returned non-zero"
+chezmoi --source . apply -R --force -k --verbose|| echo "[warn] chezmoi apply returned non-zero"
 
+ensure_path_persist
 echo "[success] Linux bootstrap complete!"
