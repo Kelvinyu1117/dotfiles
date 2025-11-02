@@ -198,7 +198,7 @@ install_chezmoi
 echo "[info] Applying chezmoi dotfiles (current dir as source)…"
 chezmoi --source . apply -R --force -k --verbose|| echo "[warn] chezmoi apply returned non-zero"
 
-for f in "$HOME/.profile" "$HOME/.zprofile" "$HOME/.zshrc"; do
+for f in "$HOME/.profile" "$HOME/.zprofile"; do
     [ -f "$f" ] || : > "$f"
     grep -qxF "$PATH_LINE" "$f" || echo "$PATH_LINE" >> "$f"
 done
