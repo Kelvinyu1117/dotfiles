@@ -113,8 +113,9 @@ source $ZSH/oh-my-zsh.sh
 # alias zshconfig="mate ~/.zshrc"
 # alias ohmyzsh="mate ~/.oh-my-zsh"
 
-
 eval "$(starship init zsh)"
+eval "$(mcfly init zsh)"
+
 alias vim="nvim"
 alias vi="nvim"
 alias vimdiff='nvim -d'
