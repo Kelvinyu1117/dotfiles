@@ -4,6 +4,6 @@
 .oh-my-zsh/custom/themes/spaceship.zsh-theme
 
 # Ignore nvim
-.config/nvim/**
+.config/nvim/lazy-lock.json
 
 
