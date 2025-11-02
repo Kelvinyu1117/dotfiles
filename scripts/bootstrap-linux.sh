@@ -34,6 +34,7 @@ linux_packages=(git curl zsh unzip ripgrep bat fzf eza ca-certificates)
 install_common_tools_apt() {
   sudo apt-get update -y
   sudo apt-get install -y "${linux_packages[@]}"
+  cargo install mcfly --force
 }
 
 install_common_tools_apk() {
