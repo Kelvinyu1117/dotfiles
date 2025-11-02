@@ -143,25 +143,28 @@ install_chezmoi() {
 }
 
 install_yazi() {
-  if command -v yazi >/dev/null; then return 0; fi
-  echo "[info] Installing yazi…"
+  if command -v yazi >/dev/null && command -v ya >/dev/null; then return 0; fi
+  echo "[info] Installing yazi and ya…"
   if [ "$HAS_APK" -eq 1 ]; then
-    # Prefer native package on Alpine
     sudo apk add --no-cache yazi || true
+    sudo apk add --no-cache ya || true
   fi
-  if ! command -v yazi >/dev/null; then
+  if ! command -v yazi >/dev/null || ! command -v ya >/dev/null; then
     # Fallback to upstream static build zip
     tmpdir="$(mktemp -d)"
     pushd "$tmpdir" >/dev/null
     curl -fsSLO "https://github.com/sxyazi/yazi/releases/latest/download/yazi-$( [ "$ARCH" = "aarch64" ] || [ "$ARCH" = "arm64" ] && echo aarch64 || echo x86_64 )-unknown-linux-gnu.zip"
     unzip -o *.zip
-    # Find the yazi binary path and install
+    # Install both yazi and ya binaries if present in release
     find . -type f -name yazi -exec install -m 0755 {} "$USER_BIN/yazi" \;
+    find . -type f -name ya -exec install -m 0755 {} "$USER_BIN/ya" \;
     popd >/dev/null
     rm -rf "$tmpdir"
   fi
   command -v yazi >/dev/null || echo "[warn] yazi not found after install (check release assets for your arch)"
+  command -v ya >/dev/null || echo "[warn] ya not found after install (check release assets for your arch)"
 }
+
 
 install_starship() {
   if command -v starship >/dev/null; then return 0; fi
