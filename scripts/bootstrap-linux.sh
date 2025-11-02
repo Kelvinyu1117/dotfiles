@@ -29,14 +29,16 @@ ensure_path_persist() {
   export PATH="$USER_BIN:$PATH"
 }
 
+linux_packages=(git curl zsh unzip ripgrep bat fzf eza ca-certificates)
+
 install_common_tools_apt() {
   sudo apt-get update -y
-  sudo apt-get install -y git curl zsh unzip ripgrep ca-certificates
+  sudo apt-get install -y "${linux_packages[@]}"
 }
 
 install_common_tools_apk() {
   sudo apk update
-  sudo apk add --no-cache git curl zsh unzip ripgrep ca-certificates
+  sudo apk add --no-cache "${linux_packages[@]}"
 }
 
 # ---------- Neovim installers ----------
