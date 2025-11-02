@@ -199,7 +199,7 @@ install_yazi
 install_starship
 install_chezmoi
 echo "[info] Applying chezmoi dotfiles (current dir as source)…"
-chezmoi --source . apply -R --force -k --verbose|| echo "[warn] chezmoi apply returned non-zero"
+chezmoi --source . apply -R --force -k || echo "[warn] chezmoi apply returned non-zero"
 
 for f in "$HOME/.profile" "$HOME/.zprofile"; do
     [ -f "$f" ] || : > "$f"
