@@ -27,10 +27,6 @@ LIBC="$(detect_libc)"
 ensure_path_persist() {
   mkdir -p "$USER_BIN" "$USER_LOCAL"
   export PATH="$USER_BIN:$PATH"
-  for f in "$HOME/.profile" "$HOME/.zprofile" "$HOME/.zshrc"; do
-    [ -f "$f" ] || : > "$f"
-    grep -qxF "$PATH_LINE" "$f" || echo "$PATH_LINE" >> "$f"
-  done
 }
 
 install_common_tools_apt() {
@@ -179,6 +175,8 @@ install_starship() {
 }
 
 # ================== MAIN ==================
+ensure_path_persist
+
 # Base tooling
 if [ "$HAS_APK" -eq 1 ]; then install_common_tools_apk; fi
 if [ "$HAS_APT" -eq 1 ]; then install_common_tools_apt; fi
@@ -200,5 +198,9 @@ install_chezmoi
 echo "[info] Applying chezmoi dotfiles (current dir as source)…"
 chezmoi --source . apply -R --force -k --verbose|| echo "[warn] chezmoi apply returned non-zero"
 
-ensure_path_persist
+for f in "$HOME/.profile" "$HOME/.zprofile" "$HOME/.zshrc"; do
+    [ -f "$f" ] || : > "$f"
+    grep -qxF "$PATH_LINE" "$f" || echo "$PATH_LINE" >> "$f"
+done
+  
 echo "[success] Linux bootstrap complete!"
