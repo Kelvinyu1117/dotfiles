@@ -1,7 +1,7 @@
 # Ignore Oh My Zsh caches
 .oh-my-zsh/cache/**
 .oh-my-zsh/completions/**
-.oh-my-zsh/custom/**
+.oh-my-zsh/custom/themes/spaceship.zsh-theme
 
 # Ignore nvim
 .config/nvim/**
