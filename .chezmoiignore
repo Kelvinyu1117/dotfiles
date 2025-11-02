@@ -3,7 +3,4 @@
 .oh-my-zsh/completions/**
 .oh-my-zsh/custom/themes/spaceship.zsh-theme
 
-# Ignore nvim
-.config/nvim/lazy-lock.json
-
 
