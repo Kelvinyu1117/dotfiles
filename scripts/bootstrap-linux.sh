@@ -182,6 +182,15 @@ install_starship() {
   fi
 }
 
+install_lazygit() {
+  if command -v lazygit >/dev/null; then return 0; fi
+  echo "[info] Installing lazygit…"
+  LAZYGIT_VERSION=$(curl -s "https://api.github.com/repos/jesseduffield/lazygit/releases/latest" | grep -Po '"tag_name": "v\K[^"]*')
+  curl -fsSL -o /tmp/lazygit.tar.gz "https://github.com/jesseduffield/lazygit/releases/latest/download/lazygit_${LAZYGIT_VERSION}_Linux_x86_64.tar.gz"
+  tar -xzf /tmp/lazygit.tar.gz -C "$USER_BIN" lazygit
+  rm /tmp/lazygit.tar.gz
+}
+
 # ================== MAIN ==================
 ensure_path_persist
 
@@ -202,6 +211,7 @@ fi
 # Yazi / Starship / Chezmoi
 install_yazi
 install_starship
+install_lazygit
 install_chezmoi
 echo "[info] Applying chezmoi dotfiles (current dir as source)…"
 chezmoi --source . apply -R --force -k || echo "[warn] chezmoi apply returned non-zero"
