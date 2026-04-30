@@ -2,13 +2,14 @@
 set -Eeuo pipefail
 
 USER_BIN="$HOME/.local/bin"
-PATH_LINE='export PATH="$HOME/.local/bin:$HOME/.cargo/bin:$PATH"'
+USER_LOCAL="$HOME/.local"
+ZSH_CUSTOM="${ZSH_CUSTOM:-$HOME/.oh-my-zsh/custom}"
 
 log() { echo "[info] $*"; }
 warn() { echo "[warn] $*"; }
 die() { echo "[error] $*" >&2; exit 1; }
 
-mkdir -p "$USER_BIN"
+mkdir -p "$USER_BIN" "$USER_LOCAL"
 export PATH="$USER_BIN:$HOME/.cargo/bin:$PATH"
 
 ARCH="$(uname -m)"
@@ -16,15 +17,24 @@ case "$ARCH" in
   x86_64|amd64)
     NVIM_ARCH="x86_64"
     LAZYGIT_ARCH="x86_64"
+    YAZI_ARCH="x86_64"
     ;;
   aarch64|arm64)
     NVIM_ARCH="arm64"
     LAZYGIT_ARCH="arm64"
+    YAZI_ARCH="aarch64"
     ;;
   *)
     die "unsupported arch: $ARCH"
     ;;
 esac
+
+PATH_LINE='export PATH="$HOME/.local/bin:$HOME/.cargo/bin:$HOME/.local/share/uv/tools:$PATH"'
+
+# -------------------------
+# Apt packages
+# -------------------------
+log "Installing Ubuntu packages..."
 
 sudo apt-get update -y
 sudo apt-get install -y --no-install-recommends \
@@ -91,6 +101,9 @@ sudo apt-get install -y --no-install-recommends \
 ln -sf "$(command -v fdfind)" "$USER_BIN/fd" || true
 ln -sf "$(command -v batcat)" "$USER_BIN/bat" || true
 
+# -------------------------
+# Rust
+# -------------------------
 if ! command -v rustup >/dev/null; then
   log "Installing Rust..."
   curl --proto '=https' --tlsv1.2 -fsSL https://sh.rustup.rs | \
@@ -113,6 +126,9 @@ cargo install --locked \
   sccache \
   mcfly || true
 
+# -------------------------
+# Python / uv
+# -------------------------
 if ! command -v uv >/dev/null; then
   log "Installing uv..."
   curl -LsSf https://astral.sh/uv/install.sh | sh
@@ -126,6 +142,9 @@ uv tool install basedpyright || true
 uv tool install ipython || true
 uv tool install pre-commit || true
 
+# -------------------------
+# Neovim
+# -------------------------
 if ! command -v nvim >/dev/null; then
   log "Installing Neovim for ${ARCH}..."
   rm -rf "$HOME/.local/nvim" "$USER_BIN/nvim" /tmp/nvim.tar.gz /tmp/nvim-linux-*
@@ -138,11 +157,77 @@ if ! command -v nvim >/dev/null; then
   ln -sf "$HOME/.local/nvim/bin/nvim" "$USER_BIN/nvim"
 fi
 
+# -------------------------
+# oh-my-zsh + plugins
+# -------------------------
+if [ ! -d "$HOME/.oh-my-zsh" ]; then
+  log "Installing oh-my-zsh..."
+  RUNZSH=no CHSH=no KEEP_ZSHRC=yes \
+    sh -c "$(curl -fsSL https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh)"
+fi
+
+mkdir -p "$ZSH_CUSTOM/plugins" "$ZSH_CUSTOM/themes"
+
+if [ ! -d "$ZSH_CUSTOM/plugins/zsh-autosuggestions" ]; then
+  log "Installing zsh-autosuggestions..."
+  git clone --depth=1 \
+    https://github.com/zsh-users/zsh-autosuggestions \
+    "$ZSH_CUSTOM/plugins/zsh-autosuggestions"
+fi
+
+if [ ! -d "$ZSH_CUSTOM/plugins/zsh-syntax-highlighting" ]; then
+  log "Installing zsh-syntax-highlighting..."
+  git clone --depth=1 \
+    https://github.com/zsh-users/zsh-syntax-highlighting.git \
+    "$ZSH_CUSTOM/plugins/zsh-syntax-highlighting"
+fi
+
+if [ ! -d "$ZSH_CUSTOM/plugins/zsh-completions" ]; then
+  log "Installing zsh-completions..."
+  git clone --depth=1 \
+    https://github.com/zsh-users/zsh-completions \
+    "$ZSH_CUSTOM/plugins/zsh-completions"
+fi
+
+if [ ! -d "$ZSH_CUSTOM/themes/spaceship-prompt" ]; then
+  log "Installing spaceship prompt..."
+  git clone --depth=1 \
+    https://github.com/spaceship-prompt/spaceship-prompt.git \
+    "$ZSH_CUSTOM/themes/spaceship-prompt"
+  ln -sf "$ZSH_CUSTOM/themes/spaceship-prompt/spaceship.zsh-theme" \
+    "$ZSH_CUSTOM/themes/spaceship.zsh-theme"
+fi
+
+# -------------------------
+# Starship also kept available
+# -------------------------
 if ! command -v starship >/dev/null; then
   log "Installing starship..."
   BIN_DIR="$USER_BIN" sh -c "$(curl -fsSL https://starship.rs/install.sh)" -- --yes
 fi
 
+# -------------------------
+# Yazi
+# -------------------------
+if ! command -v yazi >/dev/null || ! command -v ya >/dev/null; then
+  log "Installing yazi for ${ARCH}..."
+  tmpdir="$(mktemp -d)"
+  pushd "$tmpdir" >/dev/null
+
+  curl -fsSLO \
+    "https://github.com/sxyazi/yazi/releases/latest/download/yazi-${YAZI_ARCH}-unknown-linux-gnu.zip"
+
+  unzip -o *.zip
+  find . -type f -name yazi -exec install -m 0755 {} "$USER_BIN/yazi" \;
+  find . -type f -name ya -exec install -m 0755 {} "$USER_BIN/ya" \;
+
+  popd >/dev/null
+  rm -rf "$tmpdir"
+fi
+
+# -------------------------
+# lazygit
+# -------------------------
 if ! command -v lazygit >/dev/null; then
   log "Installing lazygit for ${ARCH}..."
   VERSION="$(curl -fsSL https://api.github.com/repos/jesseduffield/lazygit/releases/latest |
@@ -156,9 +241,40 @@ if ! command -v lazygit >/dev/null; then
   tar -xzf /tmp/lazygit.tar.gz -C "$USER_BIN" lazygit
 fi
 
+# -------------------------
+# chezmoi
+# -------------------------
 if ! command -v chezmoi >/dev/null; then
   log "Installing chezmoi..."
   sh -c "$(curl -fsLS get.chezmoi.io/lb)" -- -b "$USER_BIN"
+fi
+
+# -------------------------
+# zshrc fallback if chezmoi hasn't applied yet
+# -------------------------
+if [ ! -f "$HOME/.zshrc" ]; then
+  cat > "$HOME/.zshrc" <<'EOF'
+export ZSH="$HOME/.oh-my-zsh"
+ZSH_THEME="spaceship"
+
+plugins=(
+  git
+  fzf
+  zsh-autosuggestions
+  zsh-syntax-highlighting
+  zsh-completions
+)
+
+source "$ZSH/oh-my-zsh.sh"
+
+export PATH="$HOME/.local/bin:$HOME/.cargo/bin:$HOME/.local/share/uv/tools:$PATH"
+
+eval "$(mcfly init zsh)" 2>/dev/null || true
+
+# If you prefer starship instead of spaceship, uncomment:
+# ZSH_THEME=""
+# eval "$(starship init zsh)"
+EOF
 fi
 
 for f in "$HOME/.profile" "$HOME/.bashrc" "$HOME/.zprofile" "$HOME/.zshrc"; do
@@ -166,14 +282,28 @@ for f in "$HOME/.profile" "$HOME/.bashrc" "$HOME/.zprofile" "$HOME/.zshrc"; do
   grep -qxF "$PATH_LINE" "$f" || echo "$PATH_LINE" >> "$f"
 done
 
-hash -r || true
+# -------------------------
+# dotfiles
+# -------------------------
+if [ -d ./.git ] || [ -f ./dot_zshrc ] || [ -f ./home/.zshrc ]; then
+  log "Applying chezmoi dotfiles from current directory..."
+  chezmoi --source . apply -R --force -k || warn "chezmoi apply returned non-zero"
+fi
 
-log "Syncing Lazy.nvim if configured..."
-nvim --headless "+Lazy! sync" +qa || true
+# -------------------------
+# Lazy.nvim sync
+# -------------------------
+if command -v nvim >/dev/null; then
+  log "Syncing Lazy.nvim if configured..."
+  nvim --headless "+Lazy! sync" +qa || true
+fi
+
+hash -r || true
 
 echo
 echo "===== versions ====="
 nvim --version | head -1 || true
+zsh --version || true
 clang++ --version | head -1 || true
 clangd --version | head -1 || true
 clang-format --version || true
@@ -190,8 +320,11 @@ uv --version || true
 python3 --version || true
 ruff --version || true
 basedpyright --version || true
+yazi --version || true
+ya --version || true
 lazygit --version || true
 starship --version || true
+chezmoi --version || true
 echo "===================="
 
-log "Ubuntu headless dev VM bootstrap complete."
+log "Ubuntu dev VM bootstrap complete."
