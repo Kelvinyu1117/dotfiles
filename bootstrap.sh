@@ -23,11 +23,11 @@ case "$os" in
     fi
     ;;
   Linux)
-    log "Linux detected: running bootstrap-linux.sh"
-    if file_exists "$script_dir/bootstrap-linux.sh"; then
-      "$script_dir/bootstrap-linux.sh"
+    log "Linux detected: running bootstrap-linux-ubuntu.sh"
+    if file_exists "$script_dir/bootstrap-linux-ubuntu.sh"; then
+      "$script_dir/bbootstrap-linux-ubuntu.sh"
     else
-      echo "Error: bootstrap-linux.sh not found!"
+      echo "Error: bootstrap-linux-ubuntu.sh not found!"
       exit 1
     fi
     ;;
