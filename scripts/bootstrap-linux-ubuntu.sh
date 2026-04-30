@@ -6,9 +6,25 @@ PATH_LINE='export PATH="$HOME/.local/bin:$HOME/.cargo/bin:$PATH"'
 
 log() { echo "[info] $*"; }
 warn() { echo "[warn] $*"; }
+die() { echo "[error] $*" >&2; exit 1; }
 
 mkdir -p "$USER_BIN"
 export PATH="$USER_BIN:$HOME/.cargo/bin:$PATH"
+
+ARCH="$(uname -m)"
+case "$ARCH" in
+  x86_64|amd64)
+    NVIM_ARCH="x86_64"
+    LAZYGIT_ARCH="x86_64"
+    ;;
+  aarch64|arm64)
+    NVIM_ARCH="arm64"
+    LAZYGIT_ARCH="arm64"
+    ;;
+  *)
+    die "unsupported arch: $ARCH"
+    ;;
+esac
 
 sudo apt-get update -y
 sudo apt-get install -y --no-install-recommends \
@@ -111,12 +127,14 @@ uv tool install ipython || true
 uv tool install pre-commit || true
 
 if ! command -v nvim >/dev/null; then
-  log "Installing Neovim..."
+  log "Installing Neovim for ${ARCH}..."
+  rm -rf "$HOME/.local/nvim" "$USER_BIN/nvim" /tmp/nvim.tar.gz /tmp/nvim-linux-*
+
   curl -fsSL -o /tmp/nvim.tar.gz \
-    https://github.com/neovim/neovim/releases/download/stable/nvim-linux-x86_64.tar.gz
-  rm -rf "$HOME/.local/nvim"
+    "https://github.com/neovim/neovim/releases/download/stable/nvim-linux-${NVIM_ARCH}.tar.gz"
+
   tar -xzf /tmp/nvim.tar.gz -C /tmp
-  mv /tmp/nvim-linux-x86_64 "$HOME/.local/nvim"
+  mv "/tmp/nvim-linux-${NVIM_ARCH}" "$HOME/.local/nvim"
   ln -sf "$HOME/.local/nvim/bin/nvim" "$USER_BIN/nvim"
 fi
 
@@ -126,11 +144,15 @@ if ! command -v starship >/dev/null; then
 fi
 
 if ! command -v lazygit >/dev/null; then
-  log "Installing lazygit..."
+  log "Installing lazygit for ${ARCH}..."
   VERSION="$(curl -fsSL https://api.github.com/repos/jesseduffield/lazygit/releases/latest |
     grep -Po '"tag_name": "v\K[^"]*')"
+
+  rm -f /tmp/lazygit.tar.gz "$USER_BIN/lazygit"
+
   curl -fsSL -o /tmp/lazygit.tar.gz \
-    "https://github.com/jesseduffield/lazygit/releases/latest/download/lazygit_${VERSION}_Linux_x86_64.tar.gz"
+    "https://github.com/jesseduffield/lazygit/releases/latest/download/lazygit_${VERSION}_Linux_${LAZYGIT_ARCH}.tar.gz"
+
   tar -xzf /tmp/lazygit.tar.gz -C "$USER_BIN" lazygit
 fi
 
@@ -143,6 +165,8 @@ for f in "$HOME/.profile" "$HOME/.bashrc" "$HOME/.zprofile" "$HOME/.zshrc"; do
   [ -f "$f" ] || : > "$f"
   grep -qxF "$PATH_LINE" "$f" || echo "$PATH_LINE" >> "$f"
 done
+
+hash -r || true
 
 log "Syncing Lazy.nvim if configured..."
 nvim --headless "+Lazy! sync" +qa || true
@@ -166,6 +190,8 @@ uv --version || true
 python3 --version || true
 ruff --version || true
 basedpyright --version || true
+lazygit --version || true
+starship --version || true
 echo "===================="
 
 log "Ubuntu headless dev VM bootstrap complete."
