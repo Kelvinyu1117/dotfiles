@@ -298,6 +298,53 @@ if command -v nvim >/dev/null; then
   nvim --headless "+Lazy! sync" +qa || true
 fi
 
+# -------------------------
+# Zsh as default shell + history + mcfly
+# -------------------------
+log "Configuring zsh as default shell..."
+
+ZSH_PATH="$(command -v zsh)"
+
+# ensure zsh is in /etc/shells
+if ! grep -qx "$ZSH_PATH" /etc/shells; then
+  echo "$ZSH_PATH" | sudo tee -a /etc/shells >/dev/null
+fi
+
+# set default shell (non-fatal if it fails, e.g. container env)
+if command -v chsh >/dev/null; then
+  chsh -s "$ZSH_PATH" "$USER" || warn "chsh failed (likely container), will fallback to exec zsh"
+fi
+
+# ensure history file exists
+touch "$HOME/.zsh_history"
+chmod 600 "$HOME/.zsh_history"
+
+# ensure zshrc exists
+[ -f "$HOME/.zshrc" ] || touch "$HOME/.zshrc"
+
+# inject history config (idempotent)
+grep -q "HISTFILE=" "$HOME/.zshrc" || cat >> "$HOME/.zshrc" <<'EOF'
+
+# history config
+export HISTFILE=~/.zsh_history
+export HISTSIZE=100000
+export SAVEHIST=100000
+setopt appendhistory
+setopt sharehistory
+setopt hist_ignore_all_dups
+EOF
+
+# inject mcfly init (idempotent)
+if command -v mcfly >/dev/null; then
+  grep -q "mcfly init zsh" "$HOME/.zshrc" || \
+    echo 'eval "$(mcfly init zsh)"' >> "$HOME/.zshrc"
+fi
+
+# fallback: force zsh for SSH / non-login shells
+if ! grep -q "exec zsh" "$HOME/.profile"; then
+  echo 'exec zsh' >> "$HOME/.profile"
+fi
+
 hash -r || true
 
 echo
