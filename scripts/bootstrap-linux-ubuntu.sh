@@ -1,121 +1,86 @@
 #!/usr/bin/env bash
+# =============================================================================
+# scripts/bootstrap-linux-ubuntu.sh
+# OrbStack / Ubuntu dev VM bootstrap — idempotent, chezmoi-first
+# Usage: bash scripts/bootstrap-linux-ubuntu.sh
+# =============================================================================
 set -Eeuo pipefail
 
+# ── helpers ───────────────────────────────────────────────────────────────────
+log()  { printf '\033[0;32m[info]\033[0m  %s\n' "$*"; }
+warn() { printf '\033[0;33m[warn]\033[0m  %s\n' "$*"; }
+die()  { printf '\033[0;31m[error]\033[0m %s\n' "$*" >&2; exit 1; }
+has()  { command -v "$1" >/dev/null 2>&1; }
+
+# ── paths ─────────────────────────────────────────────────────────────────────
 USER_BIN="$HOME/.local/bin"
-USER_LOCAL="$HOME/.local"
-ZSH_CUSTOM="${ZSH_CUSTOM:-$HOME/.oh-my-zsh/custom}"
+mkdir -p "$USER_BIN"
+export PATH="$USER_BIN:$HOME/.cargo/bin:$HOME/.local/share/uv/tools/bin:$PATH"
 
-log() { echo "[info] $*"; }
-warn() { echo "[warn] $*"; }
-die() { echo "[error] $*" >&2; exit 1; }
-
-mkdir -p "$USER_BIN" "$USER_LOCAL"
-export PATH="$USER_BIN:$HOME/.cargo/bin:$PATH"
-
-ARCH="$(uname -m)"
-case "$ARCH" in
-  x86_64|amd64)
-    NVIM_ARCH="x86_64"
-    LAZYGIT_ARCH="x86_64"
-    YAZI_ARCH="x86_64"
-    ;;
-  aarch64|arm64)
-    NVIM_ARCH="arm64"
-    LAZYGIT_ARCH="arm64"
-    YAZI_ARCH="aarch64"
-    ;;
-  *)
-    die "unsupported arch: $ARCH"
-    ;;
+# ── arch ──────────────────────────────────────────────────────────────────────
+case "$(uname -m)" in
+  x86_64|amd64)  ARCH_ID="x86_64" ;;
+  aarch64|arm64) ARCH_ID="arm64"  ;;
+  *) die "unsupported architecture: $(uname -m)" ;;
 esac
+NVIM_ARCH="$ARCH_ID"
+LAZYGIT_ARCH="$ARCH_ID"
+YAZI_ARCH="${ARCH_ID/arm64/aarch64}"   # yazi uses aarch64, not arm64
 
-PATH_LINE='export PATH="$HOME/.local/bin:$HOME/.cargo/bin:$HOME/.local/share/uv/tools:$PATH"'
-
-# -------------------------
-# Apt packages
-# -------------------------
-log "Installing Ubuntu packages..."
-
-sudo apt-get update -y
-sudo apt-get install -y --no-install-recommends \
-  build-essential \
-  pkg-config \
-  autoconf \
-  automake \
-  libtool \
-  git \
-  curl \
-  wget \
-  ca-certificates \
-  gnupg \
-  lsb-release \
-  software-properties-common \
-  zsh \
-  tmux \
-  unzip \
-  zip \
-  tar \
-  xz-utils \
-  file \
-  tree \
-  jq \
-  htop \
-  openssh-client \
-  rsync \
-  ripgrep \
-  bat \
-  fzf \
-  eza \
-  fd-find \
+# =============================================================================
+# 1. APT PACKAGES
+# =============================================================================
+log "Installing apt packages..."
+sudo apt-get update -q
+sudo apt-get install -y -q --no-install-recommends \
+  build-essential pkg-config autoconf automake libtool \
+  git curl wget ca-certificates gnupg lsb-release software-properties-common \
+  zsh tmux unzip zip tar xz-utils file tree jq htop \
+  openssh-client rsync \
+  ripgrep bat fzf eza fd-find \
   shellcheck \
-  shfmt \
-  python3 \
-  python3-dev \
-  python3-venv \
-  python3-pip \
-  pipx \
-  cmake \
-  ninja-build \
-  ccache \
-  gdb \
-  valgrind \
-  clang \
-  clangd \
-  clang-format \
-  clang-tidy \
-  lldb \
-  llvm \
-  lld \
-  libc++-dev \
-  libc++abi-dev \
-  libssl-dev \
-  zlib1g-dev \
-  libbz2-dev \
-  libreadline-dev \
-  libsqlite3-dev \
-  libffi-dev \
-  liblzma-dev \
-  libncursesw5-dev \
-  uuid-dev
+  python3 python3-dev python3-venv python3-pip pipx \
+  cmake ninja-build ccache gdb valgrind \
+  clang clangd clang-format clang-tidy \
+  lldb llvm lld libc++-dev libc++abi-dev \
+  libssl-dev zlib1g-dev libbz2-dev libreadline-dev \
+  libsqlite3-dev libffi-dev liblzma-dev libncursesw5-dev uuid-dev
 
-ln -sf "$(command -v fdfind)" "$USER_BIN/fd" || true
-ln -sf "$(command -v batcat)" "$USER_BIN/bat" || true
+# Ubuntu renames these — create canonical symlinks
+ln -sf "$(command -v fdfind 2>/dev/null || true)" "$USER_BIN/fd"  2>/dev/null || true
+ln -sf "$(command -v batcat 2>/dev/null || true)" "$USER_BIN/bat" 2>/dev/null || true
 
-# -------------------------
-# Rust
-# -------------------------
-if ! command -v rustup >/dev/null; then
+# =============================================================================
+# 2. RUST + CARGO TOOLS
+# =============================================================================
+if ! has rustup; then
   log "Installing Rust..."
-  curl --proto '=https' --tlsv1.2 -fsSL https://sh.rustup.rs | \
-    sh -s -- -y --profile default --default-toolchain stable
+  curl --proto '=https' --tlsv1.2 -fsSL https://sh.rustup.rs \
+    | sh -s -- -y --profile default --default-toolchain stable --no-modify-path
 fi
 
 export PATH="$HOME/.cargo/bin:$PATH"
+rustup update stable 2>/dev/null || true
+rustup component add rustfmt clippy rust-src rust-analyzer 2>/dev/null || true
 
-rustup update stable || true
-rustup component add rustfmt clippy rust-src rust-analyzer || true
+# cargo-binstall: download prebuilt binaries, falls back to compile
+if ! has cargo-binstall; then
+  log "Installing cargo-binstall..."
+  curl -L --proto '=https' --tlsv1.2 -sSf \
+    https://raw.githubusercontent.com/cargo-bins/cargo-binstall/main/install-from-binstall-release.sh \
+    | bash
+fi
 
-cargo install --locked \
+# sccache: activate as compiler cache before remaining cargo installs
+if ! has sccache; then
+  cargo binstall --no-confirm --locked sccache \
+    || cargo install --locked sccache \
+    || true
+fi
+has sccache && export RUSTC_WRAPPER=sccache
+
+log "Installing Cargo tools..."
+cargo binstall --no-confirm --locked \
   cargo-edit \
   cargo-watch \
   cargo-nextest \
@@ -123,255 +88,149 @@ cargo install --locked \
   cargo-outdated \
   cargo-audit \
   bacon \
-  sccache \
-  mcfly || true
+  mcfly \
+  || true
 
-# -------------------------
-# Python / uv
-# -------------------------
-if ! command -v uv >/dev/null; then
+# =============================================================================
+# 3. PYTHON / UV
+# =============================================================================
+if ! has uv; then
   log "Installing uv..."
   curl -LsSf https://astral.sh/uv/install.sh | sh
 fi
+export PATH="$HOME/.local/bin:$HOME/.local/share/uv/tools/bin:$PATH"
 
-export PATH="$HOME/.local/bin:$PATH"
-
-uv python install 3.12 || true
-uv tool install ruff || true
+uv python install 3.12       || true
+uv tool install ruff         || true
 uv tool install basedpyright || true
-uv tool install ipython || true
-uv tool install pre-commit || true
+uv tool install ipython      || true
+uv tool install pre-commit   || true
 
-# -------------------------
-# Neovim
-# -------------------------
-if ! command -v nvim >/dev/null; then
-  log "Installing Neovim for ${ARCH}..."
-  rm -rf "$HOME/.local/nvim" "$USER_BIN/nvim" /tmp/nvim.tar.gz /tmp/nvim-linux-*
-
+# =============================================================================
+# 4. NEOVIM (prebuilt tarball)
+# =============================================================================
+if ! has nvim; then
+  log "Installing Neovim (${NVIM_ARCH})..."
   curl -fsSL -o /tmp/nvim.tar.gz \
     "https://github.com/neovim/neovim/releases/download/stable/nvim-linux-${NVIM_ARCH}.tar.gz"
-
   tar -xzf /tmp/nvim.tar.gz -C /tmp
+  rm -rf "$HOME/.local/nvim"
   mv "/tmp/nvim-linux-${NVIM_ARCH}" "$HOME/.local/nvim"
   ln -sf "$HOME/.local/nvim/bin/nvim" "$USER_BIN/nvim"
+  rm -f /tmp/nvim.tar.gz
 fi
 
-# -------------------------
-# oh-my-zsh + plugins
-# -------------------------
-if [ ! -d "$HOME/.oh-my-zsh" ]; then
-  log "Installing oh-my-zsh..."
-  RUNZSH=no CHSH=no KEEP_ZSHRC=yes \
-    sh -c "$(curl -fsSL https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh)"
-fi
-
-mkdir -p "$ZSH_CUSTOM/plugins" "$ZSH_CUSTOM/themes"
-
-if [ ! -d "$ZSH_CUSTOM/plugins/zsh-autosuggestions" ]; then
-  log "Installing zsh-autosuggestions..."
-  git clone --depth=1 \
-    https://github.com/zsh-users/zsh-autosuggestions \
-    "$ZSH_CUSTOM/plugins/zsh-autosuggestions"
-fi
-
-if [ ! -d "$ZSH_CUSTOM/plugins/zsh-syntax-highlighting" ]; then
-  log "Installing zsh-syntax-highlighting..."
-  git clone --depth=1 \
-    https://github.com/zsh-users/zsh-syntax-highlighting.git \
-    "$ZSH_CUSTOM/plugins/zsh-syntax-highlighting"
-fi
-
-if [ ! -d "$ZSH_CUSTOM/plugins/zsh-completions" ]; then
-  log "Installing zsh-completions..."
-  git clone --depth=1 \
-    https://github.com/zsh-users/zsh-completions \
-    "$ZSH_CUSTOM/plugins/zsh-completions"
-fi
-
-if [ ! -d "$ZSH_CUSTOM/themes/spaceship-prompt" ]; then
-  log "Installing spaceship prompt..."
-  git clone --depth=1 \
-    https://github.com/spaceship-prompt/spaceship-prompt.git \
-    "$ZSH_CUSTOM/themes/spaceship-prompt"
-  ln -sf "$ZSH_CUSTOM/themes/spaceship-prompt/spaceship.zsh-theme" \
-    "$ZSH_CUSTOM/themes/spaceship.zsh-theme"
-fi
-
-# -------------------------
-# Starship also kept available
-# -------------------------
-if ! command -v starship >/dev/null; then
+# =============================================================================
+# 5. STARSHIP
+# =============================================================================
+if ! has starship; then
   log "Installing starship..."
   BIN_DIR="$USER_BIN" sh -c "$(curl -fsSL https://starship.rs/install.sh)" -- --yes
 fi
 
-# -------------------------
-# Yazi
-# -------------------------
-if ! command -v yazi >/dev/null || ! command -v ya >/dev/null; then
-  log "Installing yazi for ${ARCH}..."
-  tmpdir="$(mktemp -d)"
-  pushd "$tmpdir" >/dev/null
-
-  curl -fsSLO \
+# =============================================================================
+# 6. YAZI
+# =============================================================================
+if ! has yazi || ! has ya; then
+  log "Installing yazi (${YAZI_ARCH})..."
+  _tmp="$(mktemp -d)"
+  curl -fsSL -o "$_tmp/yazi.zip" \
     "https://github.com/sxyazi/yazi/releases/latest/download/yazi-${YAZI_ARCH}-unknown-linux-gnu.zip"
-
-  unzip -o *.zip
-  find . -type f -name yazi -exec install -m 0755 {} "$USER_BIN/yazi" \;
-  find . -type f -name ya -exec install -m 0755 {} "$USER_BIN/ya" \;
-
-  popd >/dev/null
-  rm -rf "$tmpdir"
+  unzip -q -o "$_tmp/yazi.zip" -d "$_tmp"
+  find "$_tmp" -type f -name yazi -exec install -m 0755 {} "$USER_BIN/yazi" \;
+  find "$_tmp" -type f -name ya   -exec install -m 0755 {} "$USER_BIN/ya"   \;
+  rm -rf "$_tmp"
 fi
 
-# -------------------------
-# lazygit
-# -------------------------
-if ! command -v lazygit >/dev/null; then
-  log "Installing lazygit for ${ARCH}..."
-  VERSION="$(curl -fsSL https://api.github.com/repos/jesseduffield/lazygit/releases/latest |
-    grep -Po '"tag_name": "v\K[^"]*')"
-
-  rm -f /tmp/lazygit.tar.gz "$USER_BIN/lazygit"
-
+# =============================================================================
+# 7. LAZYGIT
+# =============================================================================
+if ! has lazygit; then
+  log "Installing lazygit (${LAZYGIT_ARCH})..."
+  _ver="$(curl -fsSL https://api.github.com/repos/jesseduffield/lazygit/releases/latest \
+    | grep -Po '"tag_name": "v\K[^"]*')"
   curl -fsSL -o /tmp/lazygit.tar.gz \
-    "https://github.com/jesseduffield/lazygit/releases/latest/download/lazygit_${VERSION}_Linux_${LAZYGIT_ARCH}.tar.gz"
-
+    "https://github.com/jesseduffield/lazygit/releases/latest/download/lazygit_${_ver}_Linux_${LAZYGIT_ARCH}.tar.gz"
   tar -xzf /tmp/lazygit.tar.gz -C "$USER_BIN" lazygit
+  rm -f /tmp/lazygit.tar.gz
 fi
 
-# -------------------------
-# chezmoi
-# -------------------------
-if ! command -v chezmoi >/dev/null; then
+# =============================================================================
+# 8. SHFMT (not in Ubuntu apt repos)
+# =============================================================================
+if ! has shfmt; then
+  log "Installing shfmt..."
+  _ver="$(curl -fsSL https://api.github.com/repos/mvdan/sh/releases/latest \
+    | grep -Po '"tag_name": "v\K[^"]*')"
+  curl -fsSL -o "$USER_BIN/shfmt" \
+    "https://github.com/mvdan/sh/releases/latest/download/shfmt_v${_ver}_linux_${ARCH_ID}"
+  chmod +x "$USER_BIN/shfmt"
+fi
+
+# =============================================================================
+# 9. CHEZMOI + DOTFILES
+# .chezmoiexternal.toml handles: oh-my-zsh, zsh plugins, spaceship, nvim-config
+# No manual git clones needed — chezmoi manages all of it.
+# =============================================================================
+if ! has chezmoi; then
   log "Installing chezmoi..."
   sh -c "$(curl -fsLS get.chezmoi.io/lb)" -- -b "$USER_BIN"
 fi
 
-# -------------------------
-# zshrc fallback if chezmoi hasn't applied yet
-# -------------------------
-if [ ! -f "$HOME/.zshrc" ]; then
-  cat > "$HOME/.zshrc" <<'EOF'
-export ZSH="$HOME/.oh-my-zsh"
-ZSH_THEME="spaceship"
+log "Applying dotfiles (Kelvinyu1117/dotfiles)..."
+chezmoi init --apply --force https://github.com/Kelvinyu1117/dotfiles.git \
+  || warn "chezmoi init --apply returned non-zero (check above)"
 
-plugins=(
-  git
-  fzf
-  zsh-autosuggestions
-  zsh-syntax-highlighting
-  zsh-completions
-)
-
-source "$ZSH/oh-my-zsh.sh"
-
-export PATH="$HOME/.local/bin:$HOME/.cargo/bin:$HOME/.local/share/uv/tools:$PATH"
-
-eval "$(mcfly init zsh)" 2>/dev/null || true
-
-# If you prefer starship instead of spaceship, uncomment:
-# ZSH_THEME=""
-# eval "$(starship init zsh)"
-EOF
-fi
-
-for f in "$HOME/.profile" "$HOME/.bashrc" "$HOME/.zprofile" "$HOME/.zshrc"; do
-  [ -f "$f" ] || : > "$f"
-  grep -qxF "$PATH_LINE" "$f" || echo "$PATH_LINE" >> "$f"
-done
-
-# -------------------------
-# dotfiles
-# -------------------------
-if [ -d ./.git ] || [ -f ./dot_zshrc ] || [ -f ./home/.zshrc ]; then
-  log "Applying chezmoi dotfiles from current directory..."
-  chezmoi --source . apply -R --force -k || warn "chezmoi apply returned non-zero"
-fi
-
-# -------------------------
-# Lazy.nvim sync
-# -------------------------
-if command -v nvim >/dev/null; then
-  log "Syncing Lazy.nvim if configured..."
-  nvim --headless "+Lazy! sync" +qa || true
-fi
-
-# -------------------------
-# Zsh as default shell + history + mcfly
-# -------------------------
-log "Configuring zsh as default shell..."
-
+# =============================================================================
+# 10. ZSH AS DEFAULT SHELL
+# =============================================================================
 ZSH_PATH="$(command -v zsh)"
+grep -qxF "$ZSH_PATH" /etc/shells \
+  || echo "$ZSH_PATH" | sudo tee -a /etc/shells >/dev/null
 
-# ensure zsh is in /etc/shells
-if ! grep -qx "$ZSH_PATH" /etc/shells; then
-  echo "$ZSH_PATH" | sudo tee -a /etc/shells >/dev/null
+# chsh may be a no-op in OrbStack VMs — soft-fail
+if has chsh; then
+  chsh -s "$ZSH_PATH" "${USER:-$(whoami)}" \
+    || warn "chsh failed — set shell via OrbStack settings or re-login"
 fi
 
-# set default shell (non-fatal if it fails, e.g. container env)
-if command -v chsh >/dev/null; then
-  chsh -s "$ZSH_PATH" "$USER" || warn "chsh failed (likely container), will fallback to exec zsh"
+# Fallback for non-zsh login shells; guard against exec loop
+if ! grep -q "exec zsh" "$HOME/.profile" 2>/dev/null; then
+  printf '\n%s\n%s\n' \
+    '# Switch to zsh for non-zsh login shells' \
+    '[ -z "${ZSH_VERSION:-}" ] && command -v zsh >/dev/null && exec zsh -l' \
+    >> "$HOME/.profile"
 fi
 
-# ensure history file exists
-touch "$HOME/.zsh_history"
-chmod 600 "$HOME/.zsh_history"
-
-# ensure zshrc exists
-[ -f "$HOME/.zshrc" ] || touch "$HOME/.zshrc"
-
-# inject history config (idempotent)
-grep -q "HISTFILE=" "$HOME/.zshrc" || cat >> "$HOME/.zshrc" <<'EOF'
-
-# history config
-export HISTFILE=~/.zsh_history
-export HISTSIZE=100000
-export SAVEHIST=100000
-setopt appendhistory
-setopt sharehistory
-setopt hist_ignore_all_dups
-EOF
-
-# inject mcfly init (idempotent)
-if command -v mcfly >/dev/null; then
-  grep -q "mcfly init zsh" "$HOME/.zshrc" || \
-    echo 'eval "$(mcfly init zsh)"' >> "$HOME/.zshrc"
+# =============================================================================
+# 11. LAZY.NVIM SYNC
+# =============================================================================
+if has nvim; then
+  log "Syncing Lazy.nvim plugins (headless)..."
+  nvim --headless "+Lazy! sync" +qa 2>/dev/null || true
 fi
 
-# fallback: force zsh for SSH / non-login shells
-if ! grep -q "exec zsh" "$HOME/.profile"; then
-  echo 'exec zsh' >> "$HOME/.profile"
-fi
-
-hash -r || true
-
+# =============================================================================
+# VERSIONS SUMMARY
+# =============================================================================
+_v() { has "$1" && "$1" --version 2>&1 | head -1 || printf '(not found)'; }
 echo
-echo "===== versions ====="
-nvim --version | head -1 || true
-zsh --version || true
-clang++ --version | head -1 || true
-clangd --version | head -1 || true
-clang-format --version || true
-clang-tidy --version | head -1 || true
-lldb --version | head -1 || true
-gdb --version | head -1 || true
-cmake --version | head -1 || true
-ninja --version || true
-ccache --version | head -1 || true
-rustc --version || true
-cargo --version || true
-rust-analyzer --version || true
-uv --version || true
-python3 --version || true
-ruff --version || true
-basedpyright --version || true
-yazi --version || true
-ya --version || true
-lazygit --version || true
-starship --version || true
-chezmoi --version || true
-echo "===================="
-
-log "Ubuntu dev VM bootstrap complete."
+echo "════════════════════ versions ════════════════════"
+printf "%-16s %s\n" "nvim:"        "$(_v nvim)"
+printf "%-16s %s\n" "zsh:"         "$(_v zsh)"
+printf "%-16s %s\n" "clang++:"     "$(has clang++ && clang++ --version | head -1 || printf '(not found)')"
+printf "%-16s %s\n" "clangd:"      "$(_v clangd)"
+printf "%-16s %s\n" "cmake:"       "$(_v cmake)"
+printf "%-16s %s\n" "ninja:"       "$(_v ninja)"
+printf "%-16s %s\n" "rustc:"       "$(_v rustc)"
+printf "%-16s %s\n" "cargo:"       "$(_v cargo)"
+printf "%-16s %s\n" "uv:"          "$(_v uv)"
+printf "%-16s %s\n" "python3:"     "$(_v python3)"
+printf "%-16s %s\n" "ruff:"        "$(_v ruff)"
+printf "%-16s %s\n" "yazi:"        "$(_v yazi)"
+printf "%-16s %s\n" "lazygit:"     "$(_v lazygit)"
+printf "%-16s %s\n" "starship:"    "$(_v starship)"
+printf "%-16s %s\n" "chezmoi:"     "$(_v chezmoi)"
+printf "%-16s %s\n" "shfmt:"       "$(_v shfmt)"
+echo "══════════════════════════════════════════════════"
+log "Done. Open a new shell or run: exec zsh"
