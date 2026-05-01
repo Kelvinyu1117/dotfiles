@@ -9,5 +9,5 @@ case "$(uname -s)" in
   *) echo "Unsupported OS" >&2; exit 1 ;;
 esac
 
-log "Bootstrap completed successfully."
+echo "Bootstrap completed successfully."
 
