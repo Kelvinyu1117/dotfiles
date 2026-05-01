@@ -26,6 +26,9 @@ export HISTSIZE=100000
 export SAVEHIST=100000
 setopt appendhistory sharehistory hist_ignore_all_dups
 
+# ensure history file exists before mcfly reads it
+[[ -f "$HISTFILE" ]] || touch "$HISTFILE"
+
 # ── tools ─────────────────────────────────────────────────────────────────────
 command -v starship >/dev/null && eval "$(starship init zsh)"
 command -v mcfly    >/dev/null && eval "$(mcfly init zsh)"
