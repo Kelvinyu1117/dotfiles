@@ -87,7 +87,7 @@ cargo binstall --no-confirm --locked \
   cargo-expand \
   cargo-outdated \
   cargo-audit \
-  bacon
+  bacon \
   || true
 
 # =============================================================================
