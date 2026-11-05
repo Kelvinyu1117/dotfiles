@@ -1,0 +1,13 @@
+# Global git ignores (core.excludesFile). Project-specific ignores belong in each repo's .gitignore.
+
+# macOS
+.DS_Store
+
+# Editors
+*.swp
+*~
+.idea/
+# .vscode/
+
+# clangd's index (written into each C/C++ project)
+.cache/clangd/

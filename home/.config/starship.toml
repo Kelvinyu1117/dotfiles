@@ -1,0 +1,66 @@
+# starship prompt (https://starship.rs/config/). Linked from ~/dotfiles.
+# Looks like:   ~/nvim-config on  main [!?] took 3s
+#               ❯
+"$schema" = "https://starship.rs/config-schema.json"
+
+add_newline = true
+command_timeout = 500 # ms; keeps the prompt snappy in huge repos
+palette = "tokyonight"
+
+# user@host only appear over SSH, so you can always tell the desktop from the Mac
+format = """$username$hostname$directory$git_branch$git_status$c$cmake$rust$python$cmd_duration
+$character"""
+
+[palettes.tokyonight]
+blue = "#7aa2f7"
+cyan = "#7dcfff"
+green = "#9ece6a"
+magenta = "#bb9af7"
+orange = "#ff9e64"
+red = "#f7768e"
+yellow = "#e0af68"
+muted = "#565f89"
+
+[username]
+show_always = false # only over SSH
+style_user = "bold magenta"
+format = "[$user]($style)@"
+
+[hostname]
+ssh_only = true
+style = "bold magenta"
+format = "[$hostname]($style) "
+
+[directory]
+style = "bold blue"
+truncation_length = 3
+truncate_to_repo = true # inside a git repo, show the path from the repo root
+
+[git_branch]
+symbol = " "
+style = "bold magenta"
+format = "on [$symbol$branch]($style) "
+
+[git_status]
+style = "bold yellow"
+format = "([\\[$all_status$ahead_behind\\]]($style) )"
+
+# Language versions only show inside a project that uses them
+[c]
+style = "bold cyan"
+[cmake]
+style = "bold cyan"
+[rust]
+style = "bold orange"
+[python]
+style = "bold yellow"
+
+[cmd_duration]
+min_time = 2000 # show how long a command took when it ran longer than 2s
+style = "muted"
+format = "took [$duration]($style) "
+
+[character]
+success_symbol = "[❯](bold green)"
+error_symbol = "[❯](bold red)"   # red after a failing command
+vimcmd_symbol = "[❮](bold green)"

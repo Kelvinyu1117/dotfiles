@@ -1,0 +1,53 @@
+# Ghostty (https://ghostty.org/docs/config). Linked from ~/dotfiles; works on macOS and Linux.
+# Reload with Cmd+Shift+, (macOS) or restart Ghostty.
+
+# ── font ──────────────────────────────────────────────────────────────────────
+# A Nerd Font gives Neovim, lazygit and the prompt their icons (installed by the Brewfile).
+font-family = JetBrainsMono Nerd Font
+font-size = 14
+
+# ── colors: tokyonight-night, matching Neovim ─────────────────────────────────
+background = #1a1b26
+foreground = #c0caf5
+cursor-color = #c0caf5
+selection-background = #283457
+selection-foreground = #c0caf5
+palette = 0=#15161e
+palette = 1=#f7768e
+palette = 2=#9ece6a
+palette = 3=#e0af68
+palette = 4=#7aa2f7
+palette = 5=#bb9af7
+palette = 6=#7dcfff
+palette = 7=#a9b1d6
+palette = 8=#414868
+palette = 9=#f7768e
+palette = 10=#9ece6a
+palette = 11=#e0af68
+palette = 12=#7aa2f7
+palette = 13=#bb9af7
+palette = 14=#7dcfff
+palette = 15=#c0caf5
+
+# Neovim's theme is transparent, so this is what shows behind your code.
+background-opacity = 0.9
+background-blur = true
+
+# ── keyboard ──────────────────────────────────────────────────────────────────
+# Option acts as Alt, so Neovim's/Zellij's <A-h/j/k/l> work (instead of typing ˙∆˚¬).
+macos-option-as-alt = true
+
+# ── clipboard ─────────────────────────────────────────────────────────────────
+# Let programs (Neovim, Zellij, also over SSH) copy to and paste from the clipboard via OSC 52.
+clipboard-read = allow
+clipboard-write = allow
+copy-on-select = clipboard
+
+# ── SSH ───────────────────────────────────────────────────────────────────────
+# Install Ghostty's terminfo on hosts you ssh into, and pass COLORTERM etc., so remote programs
+# know the terminal's real features. This is why ~/.zshrc doesn't override TERM.
+shell-integration-features = ssh-env,ssh-terminfo
+
+# ── window ────────────────────────────────────────────────────────────────────
+window-padding-x = 8
+window-padding-y = 4

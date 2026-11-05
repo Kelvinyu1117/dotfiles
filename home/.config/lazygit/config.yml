@@ -1,0 +1,7 @@
+# lazygit (`lg` in the shell, <Space>gg in Neovim)
+gui:
+  nerdFontsVersion: "3"
+git:
+  paging:
+    colorArg: always
+    pager: delta --paging=never
