@@ -1,0 +1,48 @@
+# ~/.gitconfig: shared across machines via ~/dotfiles. Your name/email live in
+# ~/.gitconfig.local (created by install.sh, not in git).
+[include]
+	path = ~/.gitconfig.local
+
+[core]
+	editor = nvim
+	pager = delta
+	excludesFile = ~/.config/git/ignore
+
+[init]
+	defaultBranch = main
+
+# delta: syntax-highlighted diffs with line numbers; `n`/`N` jump between files
+[interactive]
+	diffFilter = delta --color-only
+[delta]
+	navigate = true
+	line-numbers = true
+	syntax-theme = TwoDark
+
+[diff]
+	algorithm = histogram   # better diffs when code moves around
+	colorMoved = default
+[merge]
+	conflictStyle = zdiff3  # conflict markers also show the original text
+
+[pull]
+	rebase = true           # keep history linear instead of merge commits on pull
+[rebase]
+	autoStash = true        # pull/rebase even with uncommitted changes
+	autoSquash = true       # `git commit --fixup` commits get squashed automatically
+	updateRefs = true
+[push]
+	autoSetupRemote = true  # first `git push` of a new branch just works
+[fetch]
+	prune = true            # forget branches deleted on the remote
+[rerere]
+	enabled = true          # remember how you resolved a conflict
+
+[branch]
+	sort = -committerdate   # `git branch` lists recent branches first
+[tag]
+	sort = version:refname
+[column]
+	ui = auto
+[help]
+	autocorrect = prompt

@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 # =============================================================================
-# scripts/bootstrap-linux-ubuntu.sh
-# OrbStack / Ubuntu dev VM bootstrap — idempotent, chezmoi-first
-# Usage: bash scripts/bootstrap-linux-ubuntu.sh
+# scripts/packages-ubuntu.sh
+# Ubuntu / Debian packages (desktop, server or OrbStack VM). Idempotent.
+# Called by ../install.sh; config files, shell plugins and Neovim plugins are handled there.
 # =============================================================================
 set -Eeuo pipefail
 
@@ -37,7 +37,7 @@ sudo apt-get install -y -q --no-install-recommends \
   git curl wget ca-certificates gnupg lsb-release software-properties-common \
   zsh tmux unzip zip tar xz-utils file tree jq htop \
   openssh-client rsync \
-  ripgrep bat fzf eza fd-find \
+  ripgrep bat fzf eza fd-find zoxide \
   shellcheck \
   python3 python3-dev python3-venv python3-pip pipx \
   cmake ninja-build ccache gdb valgrind \
@@ -45,6 +45,10 @@ sudo apt-get install -y -q --no-install-recommends \
   lldb llvm lld libc++-dev libc++abi-dev \
   libssl-dev zlib1g-dev libbz2-dev libreadline-dev \
   libsqlite3-dev libffi-dev liblzma-dev libncursesw5-dev uuid-dev
+
+# git-delta (nicer git diffs) is only in apt on Ubuntu 24.04+; older releases use cargo below
+sudo apt-get install -y -q --no-install-recommends git-delta 2>/dev/null \
+  || warn "git-delta not in apt here; will install it with cargo"
 
 # Ubuntu renames these — create canonical symlinks
 ln -sf "$(command -v fdfind 2>/dev/null || true)" "$USER_BIN/fd"  2>/dev/null || true
@@ -88,7 +92,9 @@ cargo binstall --no-confirm --locked \
   cargo-outdated \
   cargo-audit \
   bacon \
+  zellij \
   || true
+has delta || cargo binstall --no-confirm --locked git-delta || true
 
 # =============================================================================
 # 3. PYTHON / UV
@@ -108,8 +114,13 @@ uv tool install pre-commit   || true
 # =============================================================================
 # 4. NEOVIM (prebuilt tarball)
 # =============================================================================
-if ! has nvim; then
-  log "Installing Neovim (${NVIM_ARCH})..."
+nvim_ok() {
+  has nvim || return 1
+  local v; v="$(nvim --version | head -n1 | sed -n 's/^NVIM v\([0-9]*\)\.\([0-9]*\).*/\1 \2/p')"
+  [ -n "$v" ] && { [ "${v% *}" -gt 0 ] || [ "${v#* }" -ge 12 ]; }
+}
+if ! nvim_ok; then
+  log "Installing Neovim stable (${NVIM_ARCH}); 0.12+ is required..."
   curl -fsSL -o /tmp/nvim.tar.gz \
     "https://github.com/neovim/neovim/releases/download/stable/nvim-linux-${NVIM_ARCH}.tar.gz"
   tar -xzf /tmp/nvim.tar.gz -C /tmp
@@ -120,15 +131,7 @@ if ! has nvim; then
 fi
 
 # =============================================================================
-# 5. STARSHIP
-# =============================================================================
-if ! has starship; then
-  log "Installing starship..."
-  BIN_DIR="$USER_BIN" sh -c "$(curl -fsSL https://starship.rs/install.sh)" -- --yes
-fi
-
-# =============================================================================
-# 6. YAZI
+# 5. YAZI
 # =============================================================================
 if ! has yazi || ! has ya; then
   log "Installing yazi (${YAZI_ARCH})..."
@@ -142,7 +145,7 @@ if ! has yazi || ! has ya; then
 fi
 
 # =============================================================================
-# 7. LAZYGIT
+# 6. LAZYGIT
 # =============================================================================
 if ! has lazygit; then
   log "Installing lazygit (${LAZYGIT_ARCH})..."
@@ -155,7 +158,7 @@ if ! has lazygit; then
 fi
 
 # =============================================================================
-# 8. SHFMT (not in Ubuntu apt repos)
+# 7. SHFMT (not in Ubuntu apt repos)
 # =============================================================================
 if ! has shfmt; then
   log "Installing shfmt..."
@@ -164,49 +167,6 @@ if ! has shfmt; then
   curl -fsSL -o "$USER_BIN/shfmt" \
     "https://github.com/mvdan/sh/releases/latest/download/shfmt_v${_ver}_linux_${ARCH_ID}"
   chmod +x "$USER_BIN/shfmt"
-fi
-
-# =============================================================================
-# 9. CHEZMOI + DOTFILES
-# .chezmoiexternal.toml handles: oh-my-zsh, zsh plugins, spaceship, nvim-config
-# No manual git clones needed — chezmoi manages all of it.
-# =============================================================================
-if ! has chezmoi; then
-  log "Installing chezmoi..."
-  sh -c "$(curl -fsLS get.chezmoi.io/lb)" -- -b "$USER_BIN"
-fi
-
-log "Applying dotfiles (Kelvinyu1117/dotfiles)..."
-chezmoi init --apply --force https://github.com/Kelvinyu1117/dotfiles.git \
-  || warn "chezmoi init --apply returned non-zero (check above)"
-
-# =============================================================================
-# 10. ZSH AS DEFAULT SHELL
-# =============================================================================
-ZSH_PATH="$(command -v zsh)"
-grep -qxF "$ZSH_PATH" /etc/shells \
-  || echo "$ZSH_PATH" | sudo tee -a /etc/shells >/dev/null
-
-# chsh may be a no-op in OrbStack VMs — soft-fail
-if has chsh; then
-  chsh -s "$ZSH_PATH" "${USER:-$(whoami)}" \
-    || warn "chsh failed — set shell via OrbStack settings or re-login"
-fi
-
-# Fallback for non-zsh login shells; guard against exec loop
-if ! grep -q "exec zsh" "$HOME/.profile" 2>/dev/null; then
-  printf '\n%s\n%s\n' \
-    '# Switch to zsh for non-zsh login shells' \
-    '[ -z "${ZSH_VERSION:-}" ] && command -v zsh >/dev/null && exec zsh -l' \
-    >> "$HOME/.profile"
-fi
-
-# =============================================================================
-# 11. LAZY.NVIM SYNC
-# =============================================================================
-if has nvim; then
-  log "Syncing Lazy.nvim plugins (headless)..."
-  nvim --headless "+Lazy! sync" +qa 2>/dev/null || true
 fi
 
 # =============================================================================
@@ -228,8 +188,8 @@ printf "%-16s %s\n" "python3:"     "$(_v python3)"
 printf "%-16s %s\n" "ruff:"        "$(_v ruff)"
 printf "%-16s %s\n" "yazi:"        "$(_v yazi)"
 printf "%-16s %s\n" "lazygit:"     "$(_v lazygit)"
-printf "%-16s %s\n" "starship:"    "$(_v starship)"
-printf "%-16s %s\n" "chezmoi:"     "$(_v chezmoi)"
+printf "%-16s %s\n" "zellij:"      "$(_v zellij)"
+printf "%-16s %s\n" "delta:"       "$(_v delta)"
 printf "%-16s %s\n" "shfmt:"       "$(_v shfmt)"
 echo "══════════════════════════════════════════════════"
-log "Done. Open a new shell or run: exec zsh"
+log "Packages done."
