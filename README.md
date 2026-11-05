@@ -13,20 +13,20 @@ git clone https://github.com/Kelvinyu1117/dotfiles.git ~/dotfiles
 ~/dotfiles/install.sh
 ```
 
-The installer is safe to run again and again. It does six things:
+The installer is safe to run again and again. It does five things:
 1. **Packages**: Homebrew + [`Brewfile`](Brewfile) on macOS, or
    [`scripts/packages-ubuntu.sh`](scripts/packages-ubuntu.sh) on Ubuntu/Debian.
 2. **Links**: every file under [`home/`](home) gets symlinked to the same path in `$HOME`. Anything
    already there is moved to `~/.dotfiles-backup/<time>/` first.
-3. **Shell**: installs oh-my-zsh, zsh-autosuggestions, zsh-syntax-highlighting and spaceship at pinned versions.
-4. **Git identity**: asks for your name and email once, and stores them in `~/.gitconfig.local`.
-5. **Neovim**: clones [nvim-config](https://github.com/Kelvinyu1117/nvim-config) to `~/nvim-config` and runs its installer.
-6. **Login shell**: makes zsh your login shell.
+   This includes the shell pieces: the starship prompt, zsh-autosuggestions and zsh-syntax-highlighting.
+3. **Git identity**: asks for your name and email once, and stores them in `~/.gitconfig.local`.
+4. **Neovim**: clones [nvim-config](https://github.com/Kelvinyu1117/nvim-config) to `~/nvim-config` and runs its installer.
+5. **Login shell**: makes zsh your login shell.
 
 Flags:
 - `--no-packages`: skip Homebrew/apt
 - `--links-only`: only redo the symlinks
-- `--update`: also pull this repo, oh-my-zsh and the plugins
+- `--update`: also pull this repo first (packages update with `brew upgrade` / `apt upgrade`)
 
 ## How syncing works
 
@@ -64,9 +64,10 @@ scripts/packages-macos.sh     Homebrew, Brewfile, Rust toolchain, uv tools
 scripts/packages-ubuntu.sh    apt, Rust + cargo tools, uv, Neovim 0.12+, lazygit, zellij, delta, yazi
 scripts/link.sh               the symlinker (--dry-run shows what it would do)
 home/
-├── .zshrc                    oh-my-zsh + spaceship, history, zoxide, aliases, Zellij-on-SSH
+├── .zshrc                    plain zsh: completion, history, fzf, plugins, zoxide, aliases, Zellij-on-SSH
 ├── .gitconfig                delta diffs, rebase on pull, zdiff3 conflicts, sane defaults
 └── .config/
+    ├── starship.toml         the prompt: dir, git, language versions, command time; user@host over SSH
     ├── git/ignore            global ignores (.DS_Store, clangd cache, ...)
     ├── ghostty/config        font, tokyonight colors, transparency, Option-as-Alt, OSC 52, SSH terminfo
     ├── zellij/config.kdl     locked mode by default, Ctrl/Alt+h/j/k/l shared with Neovim
@@ -103,16 +104,25 @@ Mac: Ghostty ──ssh──▶ Linux desktop: Zellij session "main" ──▶ n
 | `Ctrl-T` | fuzzy-pick a file and insert its path |
 | `Alt-C` | fuzzy-pick a directory and `cd` into it |
 | `→` | accept the grey autosuggestion |
+| `Ctrl-x Ctrl-e` | edit the current command in nvim (great for long one-liners) |
 | `z proj` / `zi` | jump to a frequently used directory matching "proj" / pick one interactively (zoxide) |
 | `lg` | lazygit |
 | `gs`, `gd`, `gl` | git status / diff / short log graph |
 | `ll` | detailed listing with git status (eza) |
 | a leading space, e.g. `␣export TOKEN=...` | the command is not saved to history |
 
+## Why plain zsh (no oh-my-zsh)
+
+This is the common 2026 setup: plain zsh, a starship prompt, and two plugins from the package manager.
+- **Fast**: a new shell starts in tens of milliseconds instead of a few hundred. You open many of them
+  (Zellij panes, nvim terminals, SSH).
+- **Readable**: `.zshrc` is about 100 commented lines of standard zsh, with no framework magic.
+- **Portable**: starship looks the same on every machine, and in any shell.
+
 ## Migrating from the old chezmoi setup
 
 Just run `./install.sh`.
 - The files chezmoi had copied into place (`~/.zshrc`, `~/.config/nvim`, ...) are moved to a backup and
   replaced with links.
-- `~/.oh-my-zsh` is reused as is.
+- `~/.oh-my-zsh` isn't used anymore. Delete it with `rm -rf ~/.oh-my-zsh` once you're happy.
 - Optionally, remove chezmoi's leftover state with `chezmoi purge`.

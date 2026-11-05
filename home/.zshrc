@@ -19,17 +19,24 @@ export PATH="$HOME/.local/bin:$HOME/.cargo/bin:$HOME/.local/share/uv/tools/bin:$
 export EDITOR=nvim
 export VISUAL=nvim
 
-# ── oh-my-zsh ─────────────────────────────────────────────────────────────────
-# Installed and pinned by ~/dotfiles/install.sh; `install.sh --update` updates it.
-export ZSH="$HOME/.oh-my-zsh"
-ZSH_THEME="spaceship"
-DISABLE_AUTO_UPDATE="true"
-plugins=(
-  fzf                     # Ctrl-R history search, Ctrl-T file search, Alt-C cd
-  zsh-autosuggestions     # grey suggestion from history; → accepts it
-  zsh-syntax-highlighting # must be last
-)
-[[ -r "$ZSH/oh-my-zsh.sh" ]] && source "$ZSH/oh-my-zsh.sh"
+# No framework (oh-my-zsh etc.): every line below is plain zsh you can read and change.
+# Plugins come from Homebrew/apt; the prompt is starship (~/.config/starship.toml).
+
+# ── completion ────────────────────────────────────────────────────────────────
+mkdir -p "${XDG_CACHE_HOME:-$HOME/.cache}/zsh"
+autoload -Uz compinit && compinit -d "${XDG_CACHE_HOME:-$HOME/.cache}/zsh/zcompdump"
+zstyle ':completion:*' menu select                         # Tab cycles through a menu
+zstyle ':completion:*' matcher-list 'm:{a-zA-Z}={A-Za-z}'  # case-insensitive
+zstyle ':completion:*' list-colors "${(s.:.)LS_COLORS}"
+
+# ── behaviour ─────────────────────────────────────────────────────────────────
+setopt auto_cd              # type a directory name to cd into it
+setopt interactive_comments # allow `# comments` on the command line
+bindkey -e                  # emacs-style line editing (Ctrl-a/Ctrl-e/Ctrl-w, like bash)
+bindkey '^[[1;5D' backward-word # Ctrl-←
+bindkey '^[[1;5C' forward-word  # Ctrl-→
+autoload -Uz edit-command-line && zle -N edit-command-line
+bindkey '^x^e' edit-command-line # Ctrl-x Ctrl-e: edit the current command in nvim
 
 # ── history ───────────────────────────────────────────────────────────────────
 HISTFILE="$HOME/.zsh_history"
@@ -62,6 +69,34 @@ if command -v eza >/dev/null; then
 else
   alias ll="ls -la"
 fi
+
+# ── fzf: Ctrl-R history search, Ctrl-T insert a file path, Alt-C cd into a folder ─
+if command -v fzf >/dev/null; then
+  if fzf --zsh >/dev/null 2>&1; then # fzf 0.48+
+    source <(fzf --zsh)
+  else # older fzf from apt
+    for f in /usr/share/doc/fzf/examples/key-bindings.zsh /usr/share/doc/fzf/examples/completion.zsh; do
+      [[ -r "$f" ]] && source "$f"
+    done
+  fi
+fi
+
+# ── plugins (installed by Homebrew or apt) ────────────────────────────────────
+# zsh-autosuggestions: grey suggestion from your history, → accepts it.
+# zsh-syntax-highlighting: colors commands as you type (red = not found). Must be sourced last.
+# ($HOMEBREW_PREFIX is set by `brew shellenv` above; empty on Linux.)
+for plugin in zsh-autosuggestions zsh-syntax-highlighting; do
+  for dir in "${HOMEBREW_PREFIX:-/nonexistent}/share/$plugin" "/usr/share/$plugin"; do
+    if [[ -r "$dir/$plugin.zsh" ]]; then
+      source "$dir/$plugin.zsh"
+      break
+    fi
+  done
+done
+unset plugin dir
+
+# ── prompt ────────────────────────────────────────────────────────────────────
+command -v starship >/dev/null && eval "$(starship init zsh)"
 
 # ── per-machine overrides (not in git) ────────────────────────────────────────
 [[ -r "$HOME/.zshrc.local" ]] && source "$HOME/.zshrc.local"

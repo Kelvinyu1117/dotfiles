@@ -38,6 +38,7 @@ sudo apt-get install -y -q --no-install-recommends \
   zsh tmux unzip zip tar xz-utils file tree jq htop \
   openssh-client rsync \
   ripgrep bat fzf eza fd-find zoxide \
+  zsh-autosuggestions zsh-syntax-highlighting \
   shellcheck \
   python3 python3-dev python3-venv python3-pip pipx \
   cmake ninja-build ccache gdb valgrind \
@@ -131,7 +132,15 @@ if ! nvim_ok; then
 fi
 
 # =============================================================================
-# 5. YAZI
+# 5. STARSHIP (prompt)
+# =============================================================================
+if ! has starship; then
+  log "Installing starship..."
+  curl -fsSL https://starship.rs/install.sh | sh -s -- --yes --bin-dir "$USER_BIN"
+fi
+
+# =============================================================================
+# 6. YAZI
 # =============================================================================
 if ! has yazi || ! has ya; then
   log "Installing yazi (${YAZI_ARCH})..."
@@ -145,7 +154,7 @@ if ! has yazi || ! has ya; then
 fi
 
 # =============================================================================
-# 6. LAZYGIT
+# 7. LAZYGIT
 # =============================================================================
 if ! has lazygit; then
   log "Installing lazygit (${LAZYGIT_ARCH})..."
@@ -158,7 +167,7 @@ if ! has lazygit; then
 fi
 
 # =============================================================================
-# 7. SHFMT (not in Ubuntu apt repos)
+# 8. SHFMT (not in Ubuntu apt repos)
 # =============================================================================
 if ! has shfmt; then
   log "Installing shfmt..."
@@ -188,6 +197,7 @@ printf "%-16s %s\n" "python3:"     "$(_v python3)"
 printf "%-16s %s\n" "ruff:"        "$(_v ruff)"
 printf "%-16s %s\n" "yazi:"        "$(_v yazi)"
 printf "%-16s %s\n" "lazygit:"     "$(_v lazygit)"
+printf "%-16s %s\n" "starship:"    "$(_v starship)"
 printf "%-16s %s\n" "zellij:"      "$(_v zellij)"
 printf "%-16s %s\n" "delta:"       "$(_v delta)"
 printf "%-16s %s\n" "shfmt:"       "$(_v shfmt)"

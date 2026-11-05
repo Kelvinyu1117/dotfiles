@@ -12,6 +12,11 @@ brew "git"
 brew "git-delta"   # readable diffs in git and lazygit
 brew "lazygit"
 
+# Shell (plain zsh, no framework: prompt + 2 plugins)
+brew "starship"                 # prompt (~/.config/starship.toml)
+brew "zsh-autosuggestions"
+brew "zsh-syntax-highlighting"
+
 # Terminal workflow
 brew "zellij"      # terminal multiplexer (sessions survive disconnects)
 brew "zoxide"      # `z proj` jumps to a directory you've visited

@@ -1,13 +1,13 @@
 #!/usr/bin/env bash
-# Set up (or update) a machine: packages -> config links -> oh-my-zsh -> git identity -> Neovim.
+# Set up (or update) a machine: packages -> config links -> git identity -> Neovim -> login shell.
 # Safe to re-run; running it again is how you update.
 #
 #   git clone https://github.com/Kelvinyu1117/dotfiles ~/dotfiles && ~/dotfiles/install.sh
 #
 # Flags:
-#   --no-packages   skip Homebrew/apt installs (just links, shell plugins, Neovim)
+#   --no-packages   skip Homebrew/apt installs (just links, git identity, Neovim)
 #   --links-only    only (re)create the symlinks
-#   --update        also `git pull` this repo, oh-my-zsh and the zsh plugins
+#   --update        also `git pull` this repo first (packages update with brew/apt)
 set -Eeuo pipefail
 
 REPO="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -69,46 +69,7 @@ log "Linking config files from $REPO/home into $HOME..."
 sh "$REPO/scripts/link.sh"
 [ "$LINKS_ONLY" -eq 1 ] && exit 0
 
-# 3. oh-my-zsh + plugins, pinned -------------------------------------------------
-ZSH_DIR="$HOME/.oh-my-zsh"
-ZSH_CUSTOM_DIR="$ZSH_DIR/custom"
-
-# clone_pinned <dir> <url> [tag]
-clone_pinned() {
-  local dir="$1" url="$2" tag="${3:-}"
-  if [ -d "$dir/.git" ]; then
-    if [ "$UPDATE" -eq 1 ] && [ -z "$tag" ]; then
-      git -C "$dir" pull --ff-only --quiet || warn "could not update $dir"
-    fi
-    return
-  fi
-  if [ -e "$dir" ]; then
-    # e.g. a plain copy left behind by the old chezmoi setup; keep it, it works.
-    return
-  fi
-  log "Installing $(basename "$dir")${tag:+ $tag}..."
-  if [ -n "$tag" ]; then
-    git clone --quiet --depth 1 --branch "$tag" "$url" "$dir"
-  else
-    git clone --quiet --depth 1 "$url" "$dir"
-  fi
-}
-
-if has git; then
-  clone_pinned "$ZSH_DIR" https://github.com/ohmyzsh/ohmyzsh.git
-  clone_pinned "$ZSH_CUSTOM_DIR/plugins/zsh-autosuggestions" \
-    https://github.com/zsh-users/zsh-autosuggestions.git v0.7.1
-  clone_pinned "$ZSH_CUSTOM_DIR/plugins/zsh-syntax-highlighting" \
-    https://github.com/zsh-users/zsh-syntax-highlighting.git 0.8.0
-  clone_pinned "$ZSH_CUSTOM_DIR/themes/spaceship-prompt" \
-    https://github.com/spaceship-prompt/spaceship-prompt.git v4.19.0
-  ln -sfn "$ZSH_CUSTOM_DIR/themes/spaceship-prompt/spaceship.zsh-theme" \
-    "$ZSH_CUSTOM_DIR/themes/spaceship.zsh-theme"
-else
-  warn "git not found; skipping oh-my-zsh"
-fi
-
-# 4. Git identity (kept out of the repo, in ~/.gitconfig.local) ------------------
+# 3. Git identity (kept out of the repo, in ~/.gitconfig.local) ------------------
 if [ ! -f "$HOME/.gitconfig.local" ]; then
   name="$(ask 'Git name (for commits): ')"
   email="$(ask 'Git email: ')"
@@ -120,7 +81,7 @@ if [ ! -f "$HOME/.gitconfig.local" ]; then
   fi
 fi
 
-# 5. Neovim config (separate repo, its own installer) ----------------------------
+# 4. Neovim config (separate repo, its own installer) ----------------------------
 NVIM_CONFIG_DIR="${NVIM_CONFIG_DIR:-$HOME/nvim-config}"
 if has nvim; then
   if [ ! -d "$NVIM_CONFIG_DIR/.git" ]; then
@@ -133,7 +94,7 @@ else
   warn "nvim not found; skipping the Neovim config"
 fi
 
-# 6. zsh as the login shell ------------------------------------------------------
+# 5. zsh as the login shell ------------------------------------------------------
 if has zsh && [ "$(basename "${SHELL:-}")" != "zsh" ]; then
   ZSH_PATH="$(command -v zsh)"
   if ! grep -qxF "$ZSH_PATH" /etc/shells 2>/dev/null; then
