@@ -171,10 +171,11 @@ fi
 # =============================================================================
 if ! has shfmt; then
   log "Installing shfmt..."
+  SHFMT_ARCH="${ARCH_ID/x86_64/amd64}"
   _ver="$(curl -fsSL https://api.github.com/repos/mvdan/sh/releases/latest \
     | grep -Po '"tag_name": "v\K[^"]*')"
   curl -fsSL -o "$USER_BIN/shfmt" \
-    "https://github.com/mvdan/sh/releases/latest/download/shfmt_v${_ver}_linux_${ARCH_ID}"
+    "https://github.com/mvdan/sh/releases/download/v${_ver}/shfmt_v${_ver}_linux_${SHFMT_ARCH}"
   chmod +x "$USER_BIN/shfmt"
 fi
 
