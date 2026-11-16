@@ -1,0 +1,39 @@
+  CHEAT SHEET                                   (q closes, / searches)   full guide: ~/dotfiles/WORKFLOW.md
+
+  WHO OWNS WHICH KEYS
+    Space ...         Neovim            Alt <letter>    Zellij
+    Ctrl h/j/k/l      move anywhere     Alt h/j/k/l     resize anywhere
+    Ctrl g            rare Zellij stuff (rename tab, detach, scroll); Ctrl g again to lock
+
+  ZELLIJ (works from any pane, Zellij stays locked)
+    Alt n             new pane                Alt z         zoom pane / un-zoom
+    Alt f             show/hide floating      Alt t         new tab
+    Alt 1..9          go to tab               Ctrl h/l      past the edge = prev/next tab
+    Alt s             sessions: switch, rename (Ctrl r), end (Ctrl x)
+    Alt g             lazygit (floating)      Alt y         yazi (floating)
+    Alt /             this sheet              exit          close a shell pane
+
+  RARE (press Ctrl g first, then...)
+    Ctrl t  r         rename tab              Ctrl o  d     detach (or just close the terminal)
+    Ctrl s  e         scrollback in nvim      Ctrl s  s     search scrollback
+    Ctrl p  x         close pane              Ctrl t  x     close tab
+
+  SHELL
+    dev               pick a project -> its own Zellij session (code + run tabs)
+    dev nvim          straight to the project matching "nvim"
+    z foo / zi        jump to a directory / pick one          y   yazi, cd to where you quit
+    Ctrl r            history search          Ctrl t        insert a file path
+    Alt c             cd into a folder        Ctrl x Ctrl e edit this command in nvim
+    zr <cmd>          run <cmd> in a floating pane            lg  lazygit
+
+  NEOVIM (Space and wait = every key)
+    Space ff / sg     find file / grep text   Space e       file explorer
+    Space gg          lazygit                 Ctrl /        terminal inside nvim
+    Space rr / rt     run a task / task list  Space tt      run nearest test
+    Space qs          restore session         Space ?       keys for this buffer
+
+  WHERE SHOULD THIS COMMAND RUN?
+    one-off, glance at output     Ctrl / (nvim terminal) or zr <cmd>
+    long-running (server, watch)  Alt 2, left pane
+    build with errors to jump to  Space rr (overseer -> quickfix)
+    poke around, then back        Alt f (floating shell), Alt f again to hide it

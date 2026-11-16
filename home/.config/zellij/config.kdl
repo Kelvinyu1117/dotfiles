@@ -1,9 +1,24 @@
 // Zellij (https://zellij.dev/documentation/configuration). Linked from ~/dotfiles.
+// The whole workflow is described in ~/dotfiles/WORKFLOW.md; Alt / shows a cheat sheet.
+//
+// Who owns which keys:
+//   Space ...        Neovim (leader)
+//   Ctrl h/j/k/l     move between Neovim splits AND Zellij panes (the same keys everywhere)
+//   Alt h/j/k/l      resize, also shared with Neovim
+//   Alt <letter>     Zellij: panes, tabs, floating panes, sessions (Neovim uses none of these)
+//   Ctrl g           unlock Zellij's full key set for rare things (rename tab, detach, scroll mode)
 
-// Start in "locked" mode: Zellij ignores every key except Ctrl g, so all of Neovim's shortcuts
-// reach Neovim. Press Ctrl g to unlock (the bottom bar then shows Zellij's keys: new pane, tab,
-// floating pane, detach, ...), and Ctrl g again to lock.
+// Start "locked": Zellij ignores every key except the ones bound below, so Neovim, lazygit and the
+// shell get all of their shortcuts. Ctrl g unlocks the rest (the bottom bar shows them); Ctrl g or
+// Esc locks again.
 default_mode "locked"
+
+// Same colors as Ghostty, Neovim and the prompt.
+theme "tokyo-night-dark"
+
+// One status line at the bottom (tabs + mode) instead of two bars. Projects opened with `dev` use
+// layouts/dev.kdl, which has the same bar.
+default_layout "compact"
 
 // Sessions survive a reboot: `zellij ls` lists them, `zellij attach main` brings one back.
 session_serialization true
@@ -14,14 +29,22 @@ show_release_notes false
 // Selecting text with the mouse copies it to the clipboard (OSC 52, so it also works over SSH).
 copy_on_select true
 
+// Scrollback opened in an editor (Ctrl g, Ctrl s, e) uses nvim.
+scrollback_editor "nvim"
+
 // pane_frames false   // uncomment for borderless panes
 
 keybinds {
-    // Same keys as in Neovim: Ctrl h/j/k/l move between panes, Alt h/j/k/l resize.
-    // In a Neovim pane the key goes to Neovim (smart-splits.nvim), which moves between its own
-    // splits and hands focus back to Zellij at the edge. Works in locked mode too.
-    // The first time, Zellij asks you to grant the plugin permissions: answer "y".
+    // Ctrl q quits the whole session (every pane, every running build). Sessions are meant to live
+    // for weeks, so don't make that one keypress away. To end a session: Alt s, select it, Ctrl x.
+    unbind "Ctrl q"
+
     shared_among "normal" "locked" {
+        // ── move / resize: shared with Neovim ─────────────────────────────────────────────────
+        // In a Neovim pane the key goes to Neovim (smart-splits.nvim), which moves between its own
+        // splits and hands focus back to Zellij at the edge. At the left/right edge of the screen,
+        // Ctrl h/l move to the previous/next tab.
+        // The first time, Zellij asks you to grant the plugin permissions: answer "y".
         bind "Ctrl h" { MessagePlugin "https://github.com/hiasr/vim-zellij-navigator/releases/latest/download/vim-zellij-navigator.wasm" { name "move_focus_or_tab"; payload "left"; move_mod "ctrl"; }; }
         bind "Ctrl j" { MessagePlugin "https://github.com/hiasr/vim-zellij-navigator/releases/latest/download/vim-zellij-navigator.wasm" { name "move_focus"; payload "down"; move_mod "ctrl"; }; }
         bind "Ctrl k" { MessagePlugin "https://github.com/hiasr/vim-zellij-navigator/releases/latest/download/vim-zellij-navigator.wasm" { name "move_focus"; payload "up"; move_mod "ctrl"; }; }
@@ -30,5 +53,42 @@ keybinds {
         bind "Alt j" { MessagePlugin "https://github.com/hiasr/vim-zellij-navigator/releases/latest/download/vim-zellij-navigator.wasm" { name "resize"; payload "down"; resize_mod "alt"; }; }
         bind "Alt k" { MessagePlugin "https://github.com/hiasr/vim-zellij-navigator/releases/latest/download/vim-zellij-navigator.wasm" { name "resize"; payload "up"; resize_mod "alt"; }; }
         bind "Alt l" { MessagePlugin "https://github.com/hiasr/vim-zellij-navigator/releases/latest/download/vim-zellij-navigator.wasm" { name "resize"; payload "right"; resize_mod "alt"; }; }
+
+        // ── panes ─────────────────────────────────────────────────────────────────────────────
+        bind "Alt n" { NewPane; }                 // new pane (split the biggest side); `exit` closes it
+        bind "Alt f" { ToggleFloatingPanes; }     // show/hide floating panes (makes one if none exist)
+        bind "Alt z" { ToggleFocusFullscreen; }   // zoom the focused pane, press again to un-zoom
+
+        // ── tabs ──────────────────────────────────────────────────────────────────────────────
+        bind "Alt t" { NewTab; }
+        bind "Alt 1" { GoToTab 1; }
+        bind "Alt 2" { GoToTab 2; }
+        bind "Alt 3" { GoToTab 3; }
+        bind "Alt 4" { GoToTab 4; }
+        bind "Alt 5" { GoToTab 5; }
+        bind "Alt 6" { GoToTab 6; }
+        bind "Alt 7" { GoToTab 7; }
+        bind "Alt 8" { GoToTab 8; }
+        bind "Alt 9" { GoToTab 9; }
+
+        // ── sessions: one per project (see `dev` in ~/.zshrc) ─────────────────────────────────
+        // Type to filter, Enter to switch, Ctrl r to rename, Ctrl x to end a session, Esc to close.
+        bind "Alt s" {
+            LaunchOrFocusPlugin "session-manager" {
+                floating true
+                move_to_focused_tab true
+            };
+        }
+
+        // ── tools in a floating pane (they close when you quit them) ──────────────────────────
+        bind "Alt g" { Run "lazygit" { floating true; close_on_exit true; name "lazygit"; }; }
+        bind "Alt y" { Run "yazi" { floating true; close_on_exit true; name "yazi"; }; }
+        bind "Alt /" {
+            Run "sh" "-c" "less \"${XDG_CONFIG_HOME:-$HOME/.config}/zellij/cheatsheet.txt\"" {
+                floating true
+                close_on_exit true
+                name "cheat sheet (q to close)"
+            };
+        }
     }
 }

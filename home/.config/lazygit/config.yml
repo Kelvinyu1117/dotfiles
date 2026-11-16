@@ -1,7 +1,11 @@
-# lazygit (`lg` in the shell, <Space>gg in Neovim)
+# lazygit (`lg` in the shell, <Space>gg in Neovim, Alt g in Zellij)
 gui:
   nerdFontsVersion: "3"
 git:
   paging:
     colorArg: always
     pager: delta --paging=never
+os:
+  # `e` on a file: inside Neovim's lazygit, open it in that Neovim (lazygit closes);
+  # anywhere else, open a new nvim.
+  editPreset: nvim-remote

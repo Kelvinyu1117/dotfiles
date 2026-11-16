@@ -63,6 +63,49 @@ alias gd="git diff"
 alias gl="git log --oneline --graph --decorate -20"
 alias lg="lazygit"
 
+# yazi file manager: `y` browses, and when you quit (q) the shell cd's to where you ended up
+y() {
+  local tmp cwd
+  tmp="$(mktemp -t yazi-cwd.XXXXXX)"
+  yazi "$@" --cwd-file="$tmp"
+  IFS= read -r -d '' cwd <"$tmp"
+  [[ -n "$cwd" && "$cwd" != "$PWD" ]] && builtin cd -- "$cwd"
+  rm -f -- "$tmp"
+}
+
+# ── Zellij: one session per project ───────────────────────────────────────────
+# dev               pick a project from the folders you visit most (zoxide + fzf)
+# dev nvim          jump straight to the best match for "nvim" (a path works too: dev ~/code/foo)
+# Each project gets its own Zellij session, named after its folder, with the layout in
+# ~/.config/zellij/layouts/dev.kdl: tab 1 runs nvim, tab 2 has two shells. Running `dev` again
+# brings the same session back, still running. Inside Zellij it can't nest, so it starts the
+# session in the background and you switch to it with Alt s. The full workflow: ~/dotfiles/WORKFLOW.md
+dev() {
+  local dir name
+  if [[ -n "${1:-}" && -d "$1" ]]; then
+    dir="${1:A}"
+  elif [[ -n "${1:-}" ]] && (( $+commands[zoxide] )); then
+    dir="$(zoxide query -- "$@")" || return
+  elif (( $+commands[zoxide] )); then
+    dir="$(zoxide query --interactive)" || return
+  else
+    dir="$PWD"
+  fi
+  name="${${dir:t}//[^A-Za-z0-9_-]/-}"
+
+  if [[ -n "$ZELLIJ" ]]; then
+    (cd "$dir" && zellij attach --create-background "$name" options --default-layout dev)
+    echo "Zellij session '$name' is ready: press Alt s and pick it."
+  else
+    (cd "$dir" && zellij attach --create "$name" options --default-layout dev)
+  fi
+}
+
+alias zj="zellij"
+alias zls="zellij list-sessions"
+# zr <cmd>: run a command in a floating Zellij pane (Alt f hides it, Ctrl c / Enter when it's done)
+zr() { zellij run --floating -- "$@"; }
+
 if command -v eza >/dev/null; then
   alias ls="eza --group-directories-first"
   alias ll="eza -la --git --group-directories-first"

@@ -1,0 +1,27 @@
+// The project layout, opened by `dev <project>` (see ~/.zshrc). Every pane starts in the project
+// folder.
+//
+//   tab 1 "code"   nvim, full screen. Git is <Space>gg inside it.
+//   tab 2 "run"    two shells side by side: builds/servers on the left, anything else on the right.
+//
+// Alt 1 / Alt 2 switch tabs (or Ctrl h/l past the screen edge). Alt t adds a tab.
+// If nvim quits, its pane waits: Enter starts it again, Esc drops you into a shell there.
+layout {
+    default_tab_template {
+        children
+        pane size=1 borderless=true {
+            plugin location="zellij:compact-bar"
+        }
+    }
+
+    tab name="code" focus=true {
+        pane command="nvim" name="nvim"
+    }
+
+    tab name="run" {
+        pane split_direction="vertical" {
+            pane name="build / run" size="60%"
+            pane name="shell"
+        }
+    }
+}
