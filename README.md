@@ -70,7 +70,7 @@ home/
 └── .config/
     ├── starship.toml         the prompt: dir, git, language versions, command time; user@host over SSH
     ├── git/ignore            global ignores (.DS_Store, clangd cache, ...)
-    ├── ghostty/config        font, tokyonight colors, transparency, Option-as-Alt, OSC 52, SSH terminfo
+    ├── ghostty/config        font, One Dark Pro colors, transparency, Option-as-Alt, OSC 52, SSH terminfo
     ├── zellij/
     │   ├── config.kdl        locked by default, Ctrl/Alt+h/j/k/l shared with Neovim, Alt+letter = Zellij
     │   ├── layouts/dev.kdl   the per-project layout `dev` opens: nvim tab + run tab

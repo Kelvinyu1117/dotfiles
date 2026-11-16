@@ -13,8 +13,8 @@
 // Esc locks again.
 default_mode "locked"
 
-// Same colors as Ghostty, Neovim and the prompt.
-theme "tokyo-night-dark"
+// One Dark, like Ghostty, Neovim and the prompt.
+theme "onedark"
 
 // One status line at the bottom (tabs + mode) instead of two bars. Projects opened with `dev` use
 // layouts/dev.kdl, which has the same bar.

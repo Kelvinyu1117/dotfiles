@@ -5,21 +5,21 @@
 
 add_newline = true
 command_timeout = 500 # ms; keeps the prompt snappy in huge repos
-palette = "tokyonight"
+palette = "onedark"
 
 # user@host only appear over SSH, so you can always tell the desktop from the Mac
 format = """$username$hostname$directory$git_branch$git_status$c$cmake$rust$python$cmd_duration
 $character"""
 
-[palettes.tokyonight]
-blue = "#7aa2f7"
-cyan = "#7dcfff"
-green = "#9ece6a"
-magenta = "#bb9af7"
-orange = "#ff9e64"
-red = "#f7768e"
-yellow = "#e0af68"
-muted = "#565f89"
+[palettes.onedark] # One Dark Pro
+blue = "#61afef"
+cyan = "#56b6c2"
+green = "#98c379"
+magenta = "#c678dd"
+orange = "#d19a66"
+red = "#e06c75"
+yellow = "#e5c07b"
+muted = "#7f848e"
 
 [username]
 show_always = false # only over SSH

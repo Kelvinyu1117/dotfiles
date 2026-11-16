@@ -17,7 +17,7 @@
 [delta]
 	navigate = true
 	line-numbers = true
-	syntax-theme = TwoDark
+	syntax-theme = TwoDark   # bat's Atom One Dark, matches the rest
 
 [diff]
 	algorithm = histogram   # better diffs when code moves around
