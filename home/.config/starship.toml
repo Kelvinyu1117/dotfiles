@@ -5,6 +5,7 @@
 
 add_newline = true
 command_timeout = 500 # ms; keeps the prompt snappy in huge repos
+scan_timeout = 200    # ms to list the current folder (default 30 is too short for ~ on a cold start)
 palette = "onedark"
 
 # user@host only appear over SSH, so you can always tell the desktop from the Mac
